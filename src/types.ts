@@ -27,7 +27,70 @@ export interface HookRequest {
   attempt: number;
   /** Free-form data passed through `meta` options, for correlating hooks with callers. */
   readonly meta: Record<string, unknown>;
+  /** Aborts when the call is cancelled or times out. Set before `beforeRequest` hooks run. */
+  signal?: AbortSignal;
 }
+
+/** How the `cache()` plugin produced a result: fresh entry, stale entry, 304 revalidation or network. */
+export type CacheStatus = 'hit' | 'stale' | 'revalidated' | 'miss';
+
+export interface TransferProgress {
+  /** Bytes transferred so far. */
+  loaded: number;
+  /** Total bytes when known (`Content-Length`, known body size), otherwise `undefined`. */
+  total: number | undefined;
+  /** 0–100 when `total` is known, otherwise `undefined`. */
+  percent: number | undefined;
+}
+
+/** Validation issue, compatible with Standard Schema issues. */
+export interface SchemaIssue {
+  message: string;
+  path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
+}
+
+/** A Standard Schema (Zod 3.24+, Valibot, ArkType, ...): https://standardschema.dev */
+export interface StandardSchemaLike<Output = unknown> {
+  readonly '~standard': {
+    readonly version: 1;
+    readonly vendor: string;
+    readonly validate: (
+      value: unknown,
+    ) =>
+      | { readonly value: Output; readonly issues?: undefined }
+      | { readonly issues: ReadonlyArray<SchemaIssue> }
+      | PromiseLike<
+          | { readonly value: Output; readonly issues?: undefined }
+          | { readonly issues: ReadonlyArray<SchemaIssue> }
+        >;
+    readonly types?: { readonly input: unknown; readonly output: Output } | undefined;
+  };
+}
+
+/**
+ * Validates response data. Accepts a Standard Schema, an object with `safeParse` or `parse`
+ * (Zod, Yup-style), or a function that returns the validated value or throws.
+ */
+export type SchemaLike<Output = unknown> =
+  | StandardSchemaLike<Output>
+  | { safeParse: (value: unknown) => unknown }
+  | { parse: (value: unknown) => Output }
+  | ((value: unknown) => Output | PromiseLike<Output>);
+
+/** The data type a schema produces. */
+export type SchemaOutput<S> = S extends { readonly '~standard': { readonly types?: infer Types } }
+  ? NonNullable<Types> extends { readonly output: infer O }
+    ? O
+    : unknown
+  : S extends { safeParse: (value: unknown) => infer R }
+    ? R extends { success: true; data: infer D }
+      ? D
+      : unknown
+    : S extends { parse: (value: unknown) => infer O }
+      ? O
+      : S extends (value: unknown) => infer O
+        ? Awaited<O>
+        : unknown;
 
 export interface FetchResult<T = unknown> {
   /** The URL that was requested (after `baseUrl` and `params` were applied). */
@@ -46,6 +109,10 @@ export interface FetchResult<T = unknown> {
   error: HttpError | null;
   attempts: number;
   durationMs: number;
+  /** Set by the `cache()` plugin. */
+  cache?: CacheStatus;
+  /** Set by the `offlineQueue()` plugin (`resolve` mode): the id of the queued request. */
+  queued?: string;
 }
 
 export type BackoffFunction = (retryNumber: number, info: { error: unknown; request: HookRequest }) => number;
@@ -209,6 +276,15 @@ export interface Settings extends RequestInitExtras {
   /** A custom fetch implementation. Default: `globalThis.fetch`. */
   fetch?: typeof fetch;
   meta?: Record<string, unknown>;
+  /** Validates (and may transform) successful response data; failures throw `ValidationError`. */
+  schema?: SchemaLike;
+  /** Called as the response body downloads. */
+  onDownloadProgress?: (progress: TransferProgress) => void;
+  /**
+   * Called as the request body uploads. Streams the body, so it needs runtime support for streaming
+   * request bodies (Node.js; Chromium over HTTP/2) and sends it chunked, without `Content-Length`.
+   */
+  onUploadProgress?: (progress: TransferProgress) => void;
 }
 
 export interface ClientConfig extends Settings {

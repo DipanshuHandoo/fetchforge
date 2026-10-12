@@ -7,11 +7,16 @@ A resilient, dependency-light `fetch` client for Node.js and browsers. It keeps 
 - Circuit breaker
 - Request deduplication and hedging
 - Hooks, middleware and plugins, with built-in `bearerAuth`, `logger` and `monitor` plugins
+- Response cache with TTL, stale-while-revalidate, ETag revalidation and stale-if-error, on pluggable stores (memory, Redis, [`cache-bridge`](https://www.npmjs.com/package/@dipanshuhandoo/cache-bridge), localStorage, IndexedDB, file)
+- Auth token refresh on 401 (single-flight), client-side rate limiting, idempotency keys for safe POST retries, and an offline queue with replay
+- Response validation with Zod, Valibot, ArkType or any validator, with inferred types
+- Upload/download progress and streaming helpers for Server-Sent Events, NDJSON and lines
+- `mockFetch` for tests
 - Bulk requests with a concurrency limit (via [`@dipanshuhandoo/async-slot-pool`](https://www.npmjs.com/package/@dipanshuhandoo/async-slot-pool))
 - Typed errors with overridable messages
 - Built-in metrics, plus optional structured logging and per-route monitoring (rolling windows, periodic flush, OpenTelemetry, Prometheus)
 
-Retry, circuit breaker, dedupe and hedging are **opt-in**. A client with no options behaves like `fetch` plus JSON handling, a default timeout and typed errors.
+Retry, circuit breaker, dedupe, hedging and every plugin are **opt-in**. A client with no options behaves like `fetch` plus JSON handling, a default timeout and typed errors.
 
 ## Install
 
@@ -40,11 +45,42 @@ try {
 }
 ```
 
-CommonJS: `const { createClient } = require('@dipanshuhandoo/fetchforge');`. A minified build is available at `@dipanshuhandoo/fetchforge/min`.
+CommonJS: `const { createClient } = require('@dipanshuhandoo/fetchforge');`. A minified build is available at `@dipanshuhandoo/fetchforge/min`. Cache stores live in `@dipanshuhandoo/fetchforge/stores` (and `/stores/file` for Node.js) and the test helper in `@dipanshuhandoo/fetchforge/testing`, so they're only loaded when used.
 
-Runnable examples live in [`examples/`](./examples): start with `full-tour.mjs`, then see one file per feature (retry/backoff, circuit breaker, dedupe/hedging, hooks, middleware/plugins, custom plugins and webhooks, logging and monitoring, errors/messages, bulk, timeouts). Run `npm run build`, then `node examples/full-tour.mjs`.
+## Common tasks
 
-**Full documentation:** every option, hook, error and method is defined in the [`docs/`](./docs/README.md) guides: [getting started](./docs/getting-started.md), [configuration](./docs/configuration.md), [requests and responses](./docs/requests-and-responses.md), [timeouts](./docs/timeouts.md), [retries](./docs/retries.md), [circuit breaker](./docs/circuit-breaker.md), [dedupe and hedging](./docs/dedupe-and-hedging.md), [hooks](./docs/hooks.md), [middleware](./docs/middleware-and-plugins.md), [plugins](./docs/plugins.md), [errors and messages](./docs/errors-and-messages.md), [bulk](./docs/bulk.md), [metrics](./docs/metrics.md), [logging and monitoring](./docs/logging-and-monitoring.md), [API reference](./docs/api-reference.md) and [troubleshooting](./docs/troubleshooting.md).
+```ts
+import { authRefresh, cache, createClient, idempotency, iterateSse, rateLimit } from '@dipanshuhandoo/fetchforge';
+import { redisStore } from '@dipanshuhandoo/fetchforge/stores';
+import { z } from 'zod';
+
+const api = createClient({
+  baseUrl: 'https://api.example.com',
+  retry: { retries: 2 },
+  plugins: [
+    // Fresh for 1 min, then served stale for 5 min while refreshing in the background; shared via Redis.
+    cache({ store: redisStore(redis), ttl: 60000, staleWhileRevalidate: 300000, staleIfError: 3600000 }),
+    idempotency(), // POST/PATCH get an Idempotency-Key and become safe to retry
+    authRefresh({ getToken: () => session.accessToken, refreshToken: () => session.refresh() }),
+    rateLimit({ limit: 10, interval: 1000 }), // at most 10 requests/s per origin, queued rather than rejected
+  ],
+});
+
+// Validated, typed data
+const { data: user } = await api.get('/me', { schema: z.object({ id: z.number(), name: z.string() }) });
+
+// Progress for a large download
+await api.get('/exports/report.csv', { responseType: 'blob', onDownloadProgress: (p) => bar.set(p.percent) });
+
+// Live updates over Server-Sent Events
+for await (const event of iterateSse(await api.get('/jobs/42/events', { responseType: 'stream' }))) {
+  if (event.event === 'done') break;
+}
+```
+
+Runnable examples live in [`examples/`](./examples/README.md): start with `full-tour.mjs`, then see one file per feature (retry/backoff, circuit breaker, dedupe/hedging, hooks, middleware/plugins, custom plugins and webhooks, logging and monitoring, errors/messages, bulk, timeouts, cache and cache stores, auth refresh, rate limiting, idempotency and offline queue, validation, progress and streaming, testing). Run `npm run build`, then `node examples/full-tour.mjs`.
+
+**Full documentation:** every option, hook, error and method is defined in the [`docs/`](./docs/README.md) guides: [getting started](./docs/getting-started.md), [configuration](./docs/configuration.md), [requests and responses](./docs/requests-and-responses.md), [timeouts](./docs/timeouts.md), [retries](./docs/retries.md), [circuit breaker](./docs/circuit-breaker.md), [dedupe and hedging](./docs/dedupe-and-hedging.md), [hooks](./docs/hooks.md), [middleware](./docs/middleware-and-plugins.md), [plugins](./docs/plugins.md), [errors and messages](./docs/errors-and-messages.md), [bulk](./docs/bulk.md), [metrics](./docs/metrics.md), [logging and monitoring](./docs/logging-and-monitoring.md), [response cache](./docs/cache.md), [auth refresh](./docs/auth-refresh.md), [rate limiting](./docs/rate-limiting.md), [idempotency](./docs/idempotency.md), [offline queue](./docs/offline.md), [validation](./docs/validation.md), [progress and streaming](./docs/progress-and-streaming.md), [testing](./docs/testing.md), [API reference](./docs/api-reference.md) and [troubleshooting](./docs/troubleshooting.md).
 
 ## API
 
@@ -66,10 +102,10 @@ Every call resolves to a `FetchResult<T>`:
 
 ```ts
 { url, method, data, ok, status, statusText, headers, redirected, redirectInfo,
-  response, error, attempts, durationMs }
+  response, error, attempts, durationMs, cache?, queued? }
 ```
 
-`HEAD` requests resolve with `data: undefined`. Choose how the body is parsed with `responseType`: `'auto' | 'json' | 'text' | 'blob' | 'arrayBuffer' | 'formData' | 'stream' | 'none'`.
+`cache` is set when the `cache()` plugin handled the call, `queued` when `offlineQueue()` stored it. `HEAD` requests resolve with `data: undefined`. Choose how the body is parsed with `responseType`: `'auto' | 'json' | 'text' | 'blob' | 'arrayBuffer' | 'formData' | 'stream' | 'none'`.
 
 ### Options
 
@@ -88,7 +124,9 @@ All options can be set on the client and overridden per request. Hooks and middl
 | `hooks`, `middleware` | | See below. |
 | `messages` | built-in | Override any error message. |
 | `fetch` | global | Inject a custom `fetch` (tests, proxies, polyfills). |
-| `meta` | | Arbitrary data passed to hooks. |
+| `meta` | | Arbitrary data passed to hooks; also carries per-request plugin options such as `meta: { cache: false }`. |
+| `schema` | | Validates successful response data; failures throw `ValidationError`. See [validation](./docs/validation.md). |
+| `onDownloadProgress`, `onUploadProgress` | | `({ loaded, total, percent }) => void`. See [progress and streaming](./docs/progress-and-streaming.md). |
 
 Standard `RequestInit` fields (`credentials`, `cache`, `mode`, …) are passed through. Invalid option values throw a `TypeError` before any request is made.
 
@@ -107,7 +145,7 @@ retry: {
 }
 ```
 
-`fixed` with `delay: 5000` waits 5 s each time; `linear` waits 5 s, 10 s, 15 s. `POST` and `PATCH` are not retried unless you list them in `methods`. Requests with stream bodies are never retried. Aborts, an open circuit and the total timeout always stop retrying.
+`fixed` with `delay: 5000` waits 5 s each time; `linear` waits 5 s, 10 s, 15 s. `POST` and `PATCH` are not retried unless you list them in `methods` or the request carries an `Idempotency-Key` header (see the `idempotency()` plugin). Requests with stream bodies are never retried. Aborts, an open circuit and the total timeout always stop retrying.
 
 ### Circuit breaker
 
@@ -148,11 +186,16 @@ const plugin: Plugin = { name: 'timing', middleware: timing, hooks: { /* ... */ 
 createClient({ plugins: [plugin, bearerAuth(() => getToken())] });
 ```
 
-Three plugins are bundled. All are optional and dependency-free:
+Eight plugins are bundled. All are optional and dependency-free:
 
 | Plugin | Purpose |
 | --- | --- |
 | `bearerAuth(token, { header, scheme })` | Adds an auth header on every attempt. `token` may be async and is re-evaluated each time, so refreshed tokens apply to retries. |
+| `authRefresh({ getToken, refreshToken, ... })` | On 401, refreshes the token once for all concurrent callers and replays the request. [Guide](./docs/auth-refresh.md) |
+| `cache({ store, ttl, staleWhileRevalidate, staleIfError, ... })` | HTTP response cache with revalidation, invalidation and tags, on pluggable stores. [Guide](./docs/cache.md) |
+| `rateLimit({ limit, interval, ... })` | Token bucket per origin; requests wait for a slot and `Retry-After` pauses the bucket. [Guide](./docs/rate-limiting.md) |
+| `idempotency({ methods, header, generate })` | `Idempotency-Key` per call, reused by retries, so POST/PATCH retry safely. [Guide](./docs/idempotency.md) |
+| `offlineQueue({ store, mode, ... })` | Keeps mutations made offline and replays them in order. [Guide](./docs/offline.md) |
 | `logger({ sink, level, slowThreshold, ... })` | Structured request logs with a correlation ID (`x-request-id`), retry/failure/slow-request/circuit lines, and redaction of secrets in headers, query strings and URL credentials. `sink` is `console` by default, or pino/winston/any object with `debug/info/warn/error`. |
 | `monitor({ groupBy, retainMs, flushIntervalMs, onFlush, meter, ... })` | Per-origin or per-route statistics: counts, error codes, latency percentiles, rolling windows, periodic flush to your store, OpenTelemetry meter, Prometheus text. |
 
@@ -168,7 +211,7 @@ stats.snapshot({ windowMs: 60000 }); // the last minute: requests, errors, p95 p
 stats.toPrometheus('myapp');        // text for a /metrics endpoint
 ```
 
-Writing your own plugin (for example a webhook notifier or a cache) is covered in [plugins](./docs/plugins.md); logger and monitor options are in [logging and monitoring](./docs/logging-and-monitoring.md).
+Combining plugins, their order, and writing your own (for example a webhook notifier) are covered in [plugins](./docs/plugins.md); logger and monitor options are in [logging and monitoring](./docs/logging-and-monitoring.md).
 
 ### Bulk requests
 
@@ -197,6 +240,10 @@ All errors extend `FetchForgeError` and carry `code`, `method`, `url`, `attempts
 | `CircuitOpenError` (`retryAfter`) | `ERR_CIRCUIT_OPEN` | `isCircuitOpenError` |
 | `ParseError` | `ERR_PARSE` | `isParseError` |
 | `RequestError` | `ERR_INVALID_URL`, `ERR_REQUEST` | `isFetchForgeError` |
+| `ValidationError` (`issues`, `data`) | `ERR_VALIDATION` | `isValidationError` |
+| `RateLimitError` (`key`, `retryAfter`) | `ERR_RATE_LIMIT` | `isRateLimitError` |
+| `AuthError` | `ERR_AUTH` | `isAuthError` |
+| `QueuedError` (`id`) | `ERR_QUEUED` | `isQueuedError` |
 
 Override messages with strings (`{placeholders}`) or functions; defaults are exported as `DEFAULT_MESSAGES`.
 
@@ -223,6 +270,10 @@ The package ships its own declarations for ESM and CommonJS consumers. All optio
 - Dedupe and the circuit breaker are per client instance and per process; there is no shared state across processes.
 - Hedging and retries on non-idempotent methods can duplicate side effects; you must opt in explicitly.
 - Browsers: the circuit breaker origin key and CORS behaviour follow what `fetch` exposes.
+- `onUploadProgress` streams the request body, which needs Node.js or a Chromium browser over HTTP/2; Firefox and Safari don't support it yet.
+- Cache hits return before hooks run, so `logger` and `monitor` don't see them; use `cache({ onEvent })` or `stats()` for hit rates.
+- Cache keys include response type and hash built-in auth credentials; stream requests bypass caching. For custom auth in `beforeRequest`, provide a user-partitioned `cache({ key })` callback or caching safely bypasses those calls.
+- The offline queue only persists string (JSON or text) bodies and never stores credential headers.
 
 ## Migrating from the pre-release `fetch.service.js`
 

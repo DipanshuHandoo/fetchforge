@@ -1,3 +1,4 @@
+import { registerCachePartition } from './internal.ts';
 import type { Plugin } from './types.ts';
 
 export interface BearerAuthOptions {
@@ -21,15 +22,25 @@ export function bearerAuth(
   }
   const header = options.header ?? 'Authorization';
   const scheme = options.scheme ?? 'Bearer';
+  const resolveToken = () => (typeof token === 'function' ? token() : token);
+  const prepared = new WeakMap<object, string | undefined | null>();
   // Remembers what this plugin set so a retry can refresh it without overriding a caller's own header.
   const applied = new WeakMap<object, string>();
   return {
     name: 'bearerAuth',
+    setup(client) {
+      registerCachePartition(client, async (request) => {
+        const value = await resolveToken();
+        prepared.set(request, value);
+        return value ? (scheme ? `${scheme} ${value}` : value) : undefined;
+      });
+    },
     hooks: {
       beforeRequest: async (request) => {
         const current = request.headers.get(header);
         if (current !== null && applied.get(request) !== current) return;
-        const value = typeof token === 'function' ? await token() : token;
+        const value = prepared.has(request) ? prepared.get(request) : await resolveToken();
+        prepared.delete(request);
         if (!value) {
           request.headers.delete(header);
           applied.delete(request);

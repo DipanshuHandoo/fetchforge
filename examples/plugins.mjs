@@ -1,5 +1,6 @@
 // Custom plugins: a webhook plugin that notifies another system on failures and circuit changes, and a
 // short-lived cache plugin built from middleware. Shows plugin names, setup() and combining plugins.
+// The cache here only illustrates plugin authoring; for real use, the built-in `cache()` (examples/cache.mjs).
 // Docs: docs/plugins.md
 import assert from 'node:assert/strict';
 import { bearerAuth, createClient } from '@dipanshuhandoo/fetchforge';
@@ -41,7 +42,7 @@ const webhook = ({ url, events = ['error', 'circuit'] }) => {
 const cache = (ttlMs) => {
   const entries = new Map();
   return {
-    name: 'cache',
+    name: 'my-cache',
     middleware: async ({ request }, next) => {
       if (request.method !== 'GET') return next();
       const hit = entries.get(request.url);

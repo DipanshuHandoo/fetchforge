@@ -1,3 +1,4 @@
+import { isSchemaLike } from './schema.ts';
 import type {
   CircuitBreakerOptions,
   DedupeOptions,
@@ -138,6 +139,13 @@ function validate(s: MergedSettings): void {
     throw new TypeError(`Unsupported responseType: ${String(s.responseType)}`);
   }
   if (s.fetch !== undefined && typeof s.fetch !== 'function') throw new TypeError('fetch must be a function');
+  if (s.schema !== undefined && !isSchemaLike(s.schema)) {
+    throw new TypeError('schema must be a Standard Schema, an object with safeParse/parse, or a function');
+  }
+  for (const name of ['onDownloadProgress', 'onUploadProgress'] as const) {
+    if (s[name] !== undefined && typeof s[name] !== 'function')
+      throw new TypeError(`${name} must be a function`);
+  }
 }
 
 export function defaultSettings(): MergedSettings {

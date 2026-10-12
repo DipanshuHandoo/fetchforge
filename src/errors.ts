@@ -9,7 +9,11 @@ export type ErrorCode =
   | 'ERR_CIRCUIT_OPEN'
   | 'ERR_PARSE'
   | 'ERR_INVALID_URL'
-  | 'ERR_REQUEST';
+  | 'ERR_REQUEST'
+  | 'ERR_VALIDATION'
+  | 'ERR_RATE_LIMIT'
+  | 'ERR_AUTH'
+  | 'ERR_QUEUED';
 
 export interface FetchForgeErrorOptions {
   method: string;
@@ -133,6 +137,71 @@ export class RequestError extends FetchForgeError {
   }
 }
 
+export interface ValidationIssue {
+  message: string;
+  path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
+}
+
+/** A successful response's data did not match the `schema` option. Never retried. */
+export class ValidationError extends FetchForgeError {
+  readonly issues: ReadonlyArray<ValidationIssue>;
+  readonly status: number;
+  /** The data as received, before validation. */
+  readonly data: unknown;
+  readonly response: Response;
+
+  constructor(
+    message: string,
+    options: FetchForgeErrorOptions & {
+      issues: ReadonlyArray<ValidationIssue>;
+      status: number;
+      data: unknown;
+      response: Response;
+    },
+  ) {
+    super(message, 'ERR_VALIDATION', options);
+    this.name = 'ValidationError';
+    this.issues = options.issues;
+    this.status = options.status;
+    this.data = options.data;
+    this.response = options.response;
+  }
+}
+
+/** The `rateLimit()` plugin refused to queue the request (queue full, or the wait exceeds `maxWait`). */
+export class RateLimitError extends FetchForgeError {
+  readonly key: string;
+  /** Estimated milliseconds until a slot frees up. */
+  readonly retryAfter: number;
+
+  constructor(message: string, options: FetchForgeErrorOptions & { key: string; retryAfter: number }) {
+    super(message, 'ERR_RATE_LIMIT', options);
+    this.name = 'RateLimitError';
+    this.key = options.key;
+    this.retryAfter = options.retryAfter;
+  }
+}
+
+/** The `authRefresh()` plugin could not refresh the credentials; `cause` holds the original failure. */
+export class AuthError extends FetchForgeError {
+  constructor(message: string, options: FetchForgeErrorOptions) {
+    super(message, 'ERR_AUTH', options);
+    this.name = 'AuthError';
+  }
+}
+
+/** The `offlineQueue()` plugin stored the request for replay instead of sending it now. */
+export class QueuedError extends FetchForgeError {
+  /** Id of the queued item, as reported by `pending()`, `onReplay` and `onDrop`. */
+  readonly id: string;
+
+  constructor(message: string, options: FetchForgeErrorOptions & { id: string }) {
+    super(message, 'ERR_QUEUED', options);
+    this.name = 'QueuedError';
+    this.id = options.id;
+  }
+}
+
 /** Works across realms and duplicate package copies, unlike `instanceof`. */
 export function isFetchForgeError(value: unknown): value is FetchForgeError {
   return typeof value === 'object' && value !== null && (value as Record<symbol, unknown>)[BRAND] === true;
@@ -147,3 +216,8 @@ export const isAbortError = (value: unknown): value is AbortError => hasCode(val
 export const isCircuitOpenError = (value: unknown): value is CircuitOpenError =>
   hasCode(value, 'ERR_CIRCUIT_OPEN');
 export const isParseError = (value: unknown): value is ParseError => hasCode(value, 'ERR_PARSE');
+export const isValidationError = (value: unknown): value is ValidationError =>
+  hasCode(value, 'ERR_VALIDATION');
+export const isRateLimitError = (value: unknown): value is RateLimitError => hasCode(value, 'ERR_RATE_LIMIT');
+export const isAuthError = (value: unknown): value is AuthError => hasCode(value, 'ERR_AUTH');
+export const isQueuedError = (value: unknown): value is QueuedError => hasCode(value, 'ERR_QUEUED');

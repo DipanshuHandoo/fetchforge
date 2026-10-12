@@ -44,6 +44,17 @@ for (const minify of [false, true]) {
   });
 }
 
+// Subpath entries: small, stateless modules bundled on their own so the main entry stays lean.
+for (const [entry, platform] of [
+  ['stores', 'neutral'],
+  ['file-store', 'node'],
+  ['testing', 'neutral'],
+]) {
+  const shared = { ...common, entryPoints: [`src/${entry}.ts`], minify: false };
+  await build({ ...shared, format: 'esm', platform, outfile: `dist/esm/${entry}.js` });
+  await build({ ...shared, format: 'cjs', platform: 'node', outfile: `dist/cjs/${entry}.js` });
+}
+
 await writeFile(new URL('../dist/cjs/package.json', import.meta.url), '{ "type": "commonjs" }\n');
 
 run(process.execPath, ['node_modules/typescript/bin/tsc', '-p', 'tsconfig.build.json'], { cwd: root });

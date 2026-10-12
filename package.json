@@ -1,7 +1,7 @@
 {
   "name": "@dipanshuhandoo/fetchforge",
   "version": "1.1.0",
-  "description": "Resilient fetch client for Node.js and browsers: timeouts, configurable retries and backoff, circuit breaker, request deduplication, hedging, hooks, middleware, plugins, bulk requests, typed errors and metrics.",
+  "description": "Resilient fetch client for Node.js and browsers: retries, timeouts, circuit breaker, response cache with stale-while-revalidate and pluggable stores (memory, Redis, IndexedDB, localStorage, files), auth token refresh, rate limiting, idempotency keys, schema validation, progress, streaming, offline queue, mocking, hooks, plugins and metrics.",
   "license": "MIT",
   "author": "Dipanshu Handoo",
   "keywords": [
@@ -17,6 +17,17 @@
     "middleware",
     "hooks",
     "bulk",
+    "cache",
+    "stale-while-revalidate",
+    "redis",
+    "indexeddb",
+    "rate-limit",
+    "idempotency",
+    "token-refresh",
+    "offline",
+    "sse",
+    "ndjson",
+    "mock",
     "typescript"
   ],
   "homepage": "https://github.com/DipanshuHandoo/fetchforge#readme",
@@ -53,6 +64,36 @@
       }
     },
     "./browser": "./dist/browser/fetchforge.global.min.js",
+    "./stores": {
+      "import": {
+        "types": "./dist/esm/stores.d.ts",
+        "default": "./dist/esm/stores.js"
+      },
+      "require": {
+        "types": "./dist/cjs/stores.d.ts",
+        "default": "./dist/cjs/stores.js"
+      }
+    },
+    "./stores/file": {
+      "import": {
+        "types": "./dist/esm/file-store.d.ts",
+        "default": "./dist/esm/file-store.js"
+      },
+      "require": {
+        "types": "./dist/cjs/file-store.d.ts",
+        "default": "./dist/cjs/file-store.js"
+      }
+    },
+    "./testing": {
+      "import": {
+        "types": "./dist/esm/testing.d.ts",
+        "default": "./dist/esm/testing.js"
+      },
+      "require": {
+        "types": "./dist/cjs/testing.d.ts",
+        "default": "./dist/cjs/testing.js"
+      }
+    },
     "./package.json": "./package.json"
   },
   "unpkg": "./dist/browser/fetchforge.global.min.js",
@@ -98,6 +139,7 @@
     "@biomejs/biome": "2.5.15",
     "@types/node": "^24.0.0",
     "esbuild": "^0.28.2",
+    "fake-indexeddb": "^6.2.5",
     "playwright": "^1.64.0",
     "publint": "^0.3.25",
     "typescript": "^7.0.2"

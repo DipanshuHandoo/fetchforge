@@ -159,6 +159,29 @@ test('responseType stream returns an unconsumed body', async () => {
   }
 });
 
+test('responseType stream: the caller signal still cancels the body; streams are never deduped', async () => {
+  const server = await startServer((_req, res) => {
+    res.writeHead(200);
+    res.write('a');
+  });
+  try {
+    const client = createClient({ retry: false, dedupe: true, timeout: 5000 });
+    const controller = new AbortController();
+    const [first, second] = await Promise.all([
+      client.get(server.url, { responseType: 'stream', signal: controller.signal }),
+      client.get(server.url, { responseType: 'stream' }),
+    ]);
+    assert.notEqual(first.data, second.data, 'each caller gets its own body');
+    const reader = (first.data as ReadableStream<Uint8Array>).getReader();
+    assert.equal((await reader.read()).value?.byteLength, 1);
+    controller.abort();
+    await assert.rejects(reader.read());
+    await (second.data as ReadableStream).cancel();
+  } finally {
+    await server.close();
+  }
+});
+
 test('invalid JSON on a 200 raises ParseError', async () => {
   const server = await startServer((_req, res) =>
     res.writeHead(200, { 'content-type': 'application/json' }).end('{oops'),

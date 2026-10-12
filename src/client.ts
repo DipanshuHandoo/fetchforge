@@ -16,6 +16,7 @@ import {
   NetworkError,
   RequestError,
   TimeoutError,
+  ValidationError,
   isAbortError,
   isCircuitOpenError,
   isFetchForgeError,
@@ -23,9 +24,12 @@ import {
   isParseError,
   isTimeoutError,
 } from './errors.ts';
+import { copyCachePartitions, isRevalidating, safeOrigin, setRequestResponseType } from './internal.ts';
 import { resolveMessage } from './messages.ts';
 import { MetricsStore } from './metrics.ts';
+import { trackDownload, trackUpload } from './progress.ts';
 import { RETRY_DEFAULTS, applyRetryAfter, computeDelay, isRetryable } from './retry.ts';
+import { describeIssues, runSchema } from './schema.ts';
 import type {
   CircuitState,
   ClientConfig,
@@ -36,7 +40,10 @@ import type {
   Plugin,
   RequestOptions,
   RetryInfo,
+  SchemaLike,
+  SchemaOutput,
   Settings,
+  TransferProgress,
 } from './types.ts';
 import {
   InternalAbort,
@@ -69,6 +76,9 @@ const SETTING_KEYS = new Set([
   'messages',
   'fetch',
   'meta',
+  'schema',
+  'onDownloadProgress',
+  'onUploadProgress',
 ]);
 
 const DEFAULT_ACCEPT = 'application/json, text/plain, */*';
@@ -154,6 +164,7 @@ export class FetchClient {
     const child = new FetchClient();
     child.#settings = mergeSettings(this.#settings, settings);
     child.#plugins = new Set(this.#plugins);
+    copyCachePartitions(this, child);
     for (const plugin of plugins ?? []) child.use(plugin);
     return child;
   }
@@ -190,29 +201,67 @@ export class FetchClient {
     for (const controller of [...this.#active]) controller.abort(new InternalAbort('client'));
   }
 
-  get<T = unknown>(url: string, options?: RequestOptions): Promise<FetchResult<T>> {
-    return this.request<T>(url, { ...options, method: 'GET' });
+  get<S extends SchemaLike>(
+    url: string,
+    options: RequestOptions & { schema: S },
+  ): Promise<FetchResult<SchemaOutput<S>>>;
+  get<T = unknown>(url: string, options?: RequestOptions): Promise<FetchResult<T>>;
+  get(url: string, options?: RequestOptions): Promise<FetchResult> {
+    return this.request(url, { ...options, method: 'GET' });
   }
   head(url: string, options?: RequestOptions): Promise<FetchResult<undefined>> {
     return this.request<undefined>(url, { ...options, method: 'HEAD' });
   }
-  options<T = unknown>(url: string, options?: RequestOptions): Promise<FetchResult<T>> {
-    return this.request<T>(url, { ...options, method: 'OPTIONS' });
+  options<S extends SchemaLike>(
+    url: string,
+    options: RequestOptions & { schema: S },
+  ): Promise<FetchResult<SchemaOutput<S>>>;
+  options<T = unknown>(url: string, options?: RequestOptions): Promise<FetchResult<T>>;
+  options(url: string, options?: RequestOptions): Promise<FetchResult> {
+    return this.request(url, { ...options, method: 'OPTIONS' });
   }
-  delete<T = unknown>(url: string, options?: RequestOptions): Promise<FetchResult<T>> {
-    return this.request<T>(url, { ...options, method: 'DELETE' });
+  delete<S extends SchemaLike>(
+    url: string,
+    options: RequestOptions & { schema: S },
+  ): Promise<FetchResult<SchemaOutput<S>>>;
+  delete<T = unknown>(url: string, options?: RequestOptions): Promise<FetchResult<T>>;
+  delete(url: string, options?: RequestOptions): Promise<FetchResult> {
+    return this.request(url, { ...options, method: 'DELETE' });
   }
-  post<T = unknown>(url: string, body?: unknown, options?: RequestOptions): Promise<FetchResult<T>> {
-    return this.request<T>(url, { ...options, method: 'POST', body });
+  post<S extends SchemaLike>(
+    url: string,
+    body: unknown,
+    options: RequestOptions & { schema: S },
+  ): Promise<FetchResult<SchemaOutput<S>>>;
+  post<T = unknown>(url: string, body?: unknown, options?: RequestOptions): Promise<FetchResult<T>>;
+  post(url: string, body?: unknown, options?: RequestOptions): Promise<FetchResult> {
+    return this.request(url, { ...options, method: 'POST', body });
   }
-  put<T = unknown>(url: string, body?: unknown, options?: RequestOptions): Promise<FetchResult<T>> {
-    return this.request<T>(url, { ...options, method: 'PUT', body });
+  put<S extends SchemaLike>(
+    url: string,
+    body: unknown,
+    options: RequestOptions & { schema: S },
+  ): Promise<FetchResult<SchemaOutput<S>>>;
+  put<T = unknown>(url: string, body?: unknown, options?: RequestOptions): Promise<FetchResult<T>>;
+  put(url: string, body?: unknown, options?: RequestOptions): Promise<FetchResult> {
+    return this.request(url, { ...options, method: 'PUT', body });
   }
-  patch<T = unknown>(url: string, body?: unknown, options?: RequestOptions): Promise<FetchResult<T>> {
-    return this.request<T>(url, { ...options, method: 'PATCH', body });
+  patch<S extends SchemaLike>(
+    url: string,
+    body: unknown,
+    options: RequestOptions & { schema: S },
+  ): Promise<FetchResult<SchemaOutput<S>>>;
+  patch<T = unknown>(url: string, body?: unknown, options?: RequestOptions): Promise<FetchResult<T>>;
+  patch(url: string, body?: unknown, options?: RequestOptions): Promise<FetchResult> {
+    return this.request(url, { ...options, method: 'PATCH', body });
   }
 
-  async request<T = unknown>(url: string, options: RequestOptions = {}): Promise<FetchResult<T>> {
+  request<S extends SchemaLike>(
+    url: string,
+    options: RequestOptions & { schema: S },
+  ): Promise<FetchResult<SchemaOutput<S>>>;
+  request<T = unknown>(url: string, options?: RequestOptions): Promise<FetchResult<T>>;
+  async request(url: string, options: RequestOptions = {}): Promise<FetchResult> {
     const { method: rawMethod, body, json, signal, ...overrides } = options;
     if (signal !== undefined && !(signal instanceof AbortSignal))
       throw new TypeError('signal must be an AbortSignal');
@@ -234,6 +283,7 @@ export class FetchClient {
       attempt: 0,
       meta: { ...settings.meta },
     };
+    setRequestResponseType(request, settings.responseType ?? 'auto');
 
     const metrics = this.#metrics;
     const started = Date.now();
@@ -248,7 +298,7 @@ export class FetchClient {
       metrics.status(result.status);
       if (result.error) metrics.inc('failed');
       else metrics.inc('succeeded');
-      return result as FetchResult<T>;
+      return result;
     } catch (error) {
       if (isHttpError(error)) metrics.status(error.status);
       if (isAbortError(error)) metrics.inc('aborted');
@@ -337,6 +387,19 @@ export class FetchClient {
     }
   }
 
+  #progress(
+    settings: MergedSettings,
+    callback: (progress: TransferProgress) => void,
+    progress: TransferProgress,
+    name: string,
+  ): void {
+    try {
+      callback(progress);
+    } catch (error) {
+      this.#reportHookError(settings, error, name);
+    }
+  }
+
   #abortedError(request: HookRequest, settings: MergedSettings, cause?: unknown): AbortError {
     const ctx = { method: request.method, url: request.url };
     return new AbortError(resolveMessage(settings.messages, 'aborted', ctx), { ...ctx, cause });
@@ -369,6 +432,7 @@ export class FetchClient {
     const eligible =
       options &&
       (options.methods ?? ['GET', 'HEAD']).includes(request.method) &&
+      settings.responseType !== 'stream' &&
       (request.body === undefined || typeof request.body === 'string');
     if (!options || !eligible) return this.#execute(request, settings, signal);
 
@@ -453,7 +517,8 @@ export class FetchClient {
       error = caught instanceof Error ? caught : new Error(String(caught));
     } finally {
       clearTimeout(timer);
-      unlink();
+      // Like native fetch, the caller's signal keeps cancelling a streamed body after the call returns.
+      if (!(result && settings.responseType === 'stream')) unlink();
       this.#active.delete(total);
     }
     const durationMs = Date.now() - started;
@@ -574,6 +639,7 @@ export class FetchClient {
     }
 
     try {
+      request.signal = signal;
       for (const hook of settings.hooks.beforeRequest) await hook(request);
       const hedging = settings.hedging;
       const hedge =
@@ -590,7 +656,13 @@ export class FetchClient {
       if (breaker && token) {
         const custom = settings.circuitBreaker ? settings.circuitBreaker.isFailure : undefined;
         const isFailure = custom ?? defaultIsFailure;
-        if (isFetchForgeError(error) && !isAbortError(error) && !isTotalTimeout(error)) {
+        // A client-side rate-limit refusal never reached the server: it says nothing about its health.
+        if (
+          isFetchForgeError(error) &&
+          error.code !== 'ERR_RATE_LIMIT' &&
+          !isAbortError(error) &&
+          !isTotalTimeout(error)
+        ) {
           if (isFailure(error)) breaker.failure(token);
           else breaker.success(token);
         } else {
@@ -663,14 +735,29 @@ export class FetchClient {
     let keepLink = false;
     try {
       let response: Response;
+      let body: BodyInit | null = request.body ?? null;
+      let headers = request.headers;
+      let streamed = isStreamBody(body);
+      const onUpload = settings.onUploadProgress;
+      if (onUpload && body !== null) {
+        const upload = await trackUpload(body, (p) =>
+          this.#progress(settings, onUpload, p, 'onUploadProgress'),
+        );
+        body = upload.stream;
+        streamed = true;
+        if (upload.contentType && !headers.has('content-type')) {
+          headers = new Headers(headers);
+          headers.set('content-type', upload.contentType);
+        }
+      }
       try {
         response = await fetchFn(request.url, {
           ...requestInit(settings),
           method: request.method,
-          headers: request.headers,
-          body: request.body ?? null,
+          headers,
+          body,
           signal: controller.signal,
-          ...(isStreamBody(request.body) ? { duplex: 'half' } : {}),
+          ...(streamed ? { duplex: 'half' } : {}),
         } as RequestInit);
       } catch (cause) {
         if (controller.signal.aborted) throw this.#signalError(controller.signal, request, settings);
@@ -695,15 +782,22 @@ export class FetchClient {
         const replaced = await hook(response, request);
         if (replaced instanceof Response) response = replaced;
       }
+      const onDownload = settings.onDownloadProgress;
+      if (onDownload) {
+        response = trackDownload(response, (p) =>
+          this.#progress(settings, onDownload, p, 'onDownloadProgress'),
+        );
+      }
 
-      const data = await parseBody(
+      let data = await parseBody(
         response,
         settings.responseType ?? 'auto',
         request.method,
         ctx,
         !response.ok,
       );
-      if (!response.ok) {
+      const notModified = response.status === 304 && isRevalidating(request);
+      if (!response.ok && !notModified) {
         throw new HttpError(
           resolveMessage(settings.messages, 'http', {
             ...ctx,
@@ -723,6 +817,27 @@ export class FetchClient {
         );
       }
       keepLink = settings.responseType === 'stream';
+      if (settings.schema && response.ok && !keepLink) {
+        const outcome = await runSchema(settings.schema, data);
+        if (!outcome.ok) {
+          throw new ValidationError(
+            resolveMessage(settings.messages, 'validation', {
+              ...ctx,
+              status: response.status,
+              detail: describeIssues(outcome.issues),
+            }),
+            {
+              method: request.method,
+              url: request.url,
+              issues: outcome.issues,
+              status: response.status,
+              data,
+              response,
+            },
+          );
+        }
+        data = outcome.value;
+      }
       return this.#result(request, response, data, request.attempt, Date.now() - started, null);
     } catch (error) {
       if (controller.signal.aborted && (!isFetchForgeError(error) || isParseError(error))) {
@@ -776,12 +891,4 @@ function isTotalTimeout(error: unknown): boolean {
 function defaultIsFailure(error: FetchForgeError): boolean {
   if (isHttpError(error)) return error.status >= 500 || error.status === 429;
   return error.code === 'ERR_NETWORK' || error.code === 'ERR_TIMEOUT';
-}
-
-function safeOrigin(url: string): string {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return url;
-  }
 }

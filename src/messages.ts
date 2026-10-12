@@ -11,6 +11,8 @@ export interface MessageContext {
   retryAfter?: number;
   responseType?: string;
   reason?: string;
+  /** Queued item id (`queued` message). */
+  id?: string;
 }
 
 /** A string with `{placeholders}` or a function returning the final message. */
@@ -26,6 +28,10 @@ export interface Messages {
   parse: MessageTemplate;
   invalidUrl: MessageTemplate;
   request: MessageTemplate;
+  validation: MessageTemplate;
+  rateLimit: MessageTemplate;
+  auth: MessageTemplate;
+  queued: MessageTemplate;
 }
 
 export const DEFAULT_MESSAGES: Readonly<Record<keyof Messages, string>> = Object.freeze({
@@ -38,6 +44,10 @@ export const DEFAULT_MESSAGES: Readonly<Record<keyof Messages, string>> = Object
   parse: 'Failed to parse response body as {responseType} ({method} {url}): {reason}',
   invalidUrl: 'Invalid URL: {url}',
   request: 'Request failed ({method} {url}): {reason}',
+  validation: 'Response failed validation ({method} {url}): {detail}',
+  rateLimit: 'Client-side rate limit for "{key}" exceeded: {reason} ({method} {url})',
+  auth: 'Authentication refresh failed ({method} {url}): {reason}',
+  queued: 'Request queued for replay when the connection returns ({method} {url})',
 });
 
 export function formatMessage(template: MessageTemplate, context: MessageContext): string {

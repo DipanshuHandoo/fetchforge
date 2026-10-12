@@ -30,6 +30,22 @@ From a clone: `npm run build`, then `node examples/<name>.mjs`. Each file starts
 
 **[`resilience.mjs`](./resilience.mjs)**. Linear retries plus a circuit breaker together. Purpose: a starting point for production defaults. Guides: [retries](../docs/retries.md), [circuit breaker](../docs/circuit-breaker.md).
 
-**[`plugins.mjs`](./plugins.mjs)**. A custom webhook plugin (notifies another system on failures and circuit changes) and a cache plugin, combined with `bearerAuth`. Purpose: shows how to write and combine your own plugins. Guide: [plugins](../docs/plugins.md).
+**[`plugins.mjs`](./plugins.mjs)**. A custom webhook plugin (notifies another system on failures and circuit changes) and a minimal illustrative cache plugin, combined with `bearerAuth`. Purpose: shows how to write and combine your own plugins (for real caching use `cache()` below). Guide: [plugins](../docs/plugins.md).
 
 **[`observability.mjs`](./observability.mjs)**. The `logger` plugin (redaction, correlation IDs, retry and failure lines) and the `monitor` plugin (per-route stats, windowed snapshots, periodic flush, OpenTelemetry meter, events, Prometheus text). Purpose: know what your API calls are doing in production. Guide: [logging and monitoring](../docs/logging-and-monitoring.md).
+
+**[`cache.mjs`](./cache.mjs)**. The `cache()` plugin end to end: TTL, stale-while-revalidate, `Cache-Control`, ETag revalidation with 304s, stale-if-error during an outage, private/no-store responses, per-request bypass and reload, invalidation after mutations, tags, pattern invalidation and stats. Purpose: cut latency and load for read-heavy APIs. Guide: [response cache](../docs/cache.md).
+
+**[`cache-stores.mjs`](./cache-stores.mjs)**. The same cache on different stores: two "pods" sharing Redis (`shared: true`), `@dipanshuhandoo/cache-bridge`, `localStorage`, a file store for CLIs, and an in-memory LRU with `clone`. Uses in-memory stand-ins for Redis, cache-bridge and localStorage so it runs anywhere; the comments show the real wiring. Purpose: choose and plug in a store. Guide: [stores](../docs/cache.md#stores).
+
+**[`auth-refresh.mjs`](./auth-refresh.mjs)**. An expiring access token: concurrent 401s trigger one refresh, requests are replayed with the new token, and a failed refresh surfaces as `AuthError` (sign the user out). Purpose: silent session renewal. Guide: [auth refresh](../docs/auth-refresh.md).
+
+**[`rate-limit.mjs`](./rate-limit.mjs)**. A token bucket keeping a burst under a third-party quota, per-origin buckets, `Retry-After` pauses, and `maxWait` for interactive calls. Purpose: never trip a provider's rate limit. Guide: [rate limiting](../docs/rate-limiting.md).
+
+**[`idempotency-offline.mjs`](./idempotency-offline.mjs)**. A payment POST retried safely after a lost response (charged once), business idempotency keys, and an offline queue that stores writes and replays them in order with their keys. Purpose: safe writes on unreliable networks. Guides: [idempotency](../docs/idempotency.md), [offline queue](../docs/offline.md).
+
+**[`validation.mjs`](./validation.mjs)**. Response validation with a Standard Schema (what Zod, Valibot and ArkType implement) and a `safeParse` object; a contract change raises `ValidationError` with field paths. No schema library required. Purpose: catch API contract drift at the boundary. Guide: [validation](../docs/validation.md).
+
+**[`progress-streaming.mjs`](./progress-streaming.mjs)**. Download and upload progress, Server-Sent Events, NDJSON and line streams. Purpose: progress bars, live updates, large exports with constant memory. Guide: [progress and streaming](../docs/progress-and-streaming.md).
+
+**[`testing.mjs`](./testing.mjs)**. Unit tests with `mockFetch` under `node:test`: route params, reply sequences for retries, network errors, timeouts, testing the cache plugin, and unmatched requests. Purpose: test code that uses fetchforge without a server. Guide: [testing](../docs/testing.md).

@@ -17,7 +17,9 @@ export const RETRY_DEFAULTS = {
 export function isRetryable(error: unknown, request: HookRequest, options: RetryOptions): boolean {
   if (isAbortError(error) || isCircuitOpenError(error)) return false;
   if (isTimeoutError(error) && (error.scope === 'total' || options.retryOnTimeout === false)) return false;
-  if (!(options.methods ?? IDEMPOTENT_METHODS).includes(request.method)) return false;
+  // A request carrying an idempotency key is safe to repeat, whatever its method.
+  const idempotent = request.headers.has('idempotency-key');
+  if (!idempotent && !(options.methods ?? IDEMPOTENT_METHODS).includes(request.method)) return false;
   if (isHttpError(error)) return (options.statusCodes ?? RETRY_DEFAULTS.statusCodes).includes(error.status);
   if (isNetworkError(error)) return options.retryOnNetworkError !== false;
   return isTimeoutError(error);

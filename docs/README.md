@@ -16,8 +16,16 @@
 | [Errors and messages](./errors-and-messages.md) | Every error class, codes, guards, customising messages |
 | [Bulk requests](./bulk.md) | Running many requests with a concurrency limit |
 | [Metrics](./metrics.md) | Counters and latency, resetting, aborting in-flight calls |
-| [Plugins](./plugins.md) | Built-in plugins (`bearerAuth`, `logger`, `monitor`), how plugins are applied, writing your own, recipes (webhook, rate limit, cache) |
+| [Plugins](./plugins.md) | All built-in plugins at a glance, how plugins are applied and ordered, writing your own, recipes |
 | [Logging and monitoring](./logging-and-monitoring.md) | `logger` and `monitor` plugins: redacted logs, per-route stats, rolling windows, periodic flush, OpenTelemetry, Prometheus export |
+| [Response cache](./cache.md) | `cache()`: TTL, stale-while-revalidate, ETag revalidation, stale-if-error, invalidation, tags, and stores (memory, Redis, cache-bridge, localStorage, IndexedDB, file) |
+| [Auth token refresh](./auth-refresh.md) | `authRefresh()`: refresh once on 401, single-flight across concurrent calls, replay |
+| [Rate limiting](./rate-limiting.md) | `rateLimit()`: client-side token buckets per origin, queueing, `Retry-After` |
+| [Idempotency keys](./idempotency.md) | `idempotency()`: safe POST retries and replays |
+| [Offline queue](./offline.md) | `offlineQueue()`: keep writes made offline and replay them in order |
+| [Response validation](./validation.md) | `schema` option with Zod, Valibot, ArkType or any validator; typed results |
+| [Progress and streaming](./progress-and-streaming.md) | Upload/download progress, Server-Sent Events, NDJSON, lines |
+| [Testing](./testing.md) | `mockFetch()` from `/testing`: routes, sequences, failures, assertions |
 | [API reference](./api-reference.md) | Every export, method and type |
 | [Examples](../examples/README.md) | Runnable programs, one per feature, plus a full tour |
 | [Troubleshooting and FAQ](./troubleshooting.md) | Common questions and pitfalls |
