@@ -7,7 +7,10 @@ import {
   bearerAuth,
   cache,
   createClient,
+  idempotency,
   isHttpError,
+  logger,
+  rateLimit,
 } from '../src/index.ts';
 import type { Store } from '../src/store.ts';
 import { memoryStore } from '../src/stores.ts';
@@ -133,6 +136,29 @@ test('cache: credential values and auth plugin tokens partition entries without 
   bearerToken = 'two';
   assert.deepEqual((await bearerClient.get('/bearer')).data, { user: 'Bearer two' });
   assert.equal(bearerMock.calls.length, 2);
+});
+
+test('cache: built-in rateLimit, logger and idempotency hooks do not disable caching', async () => {
+  const mock = mockFetch({ baseUrl: BASE }).get('/items', counter());
+  const limiter = rateLimit({ limit: 100, interval: 1000 });
+  const client = createClient({
+    baseUrl: BASE,
+    fetch: mock,
+    plugins: [cache(), limiter, logger({ level: 'silent' }), idempotency()],
+  });
+  try {
+    await client.get('/items');
+    const second = await client.get('/items');
+    assert.equal(second.cache, 'hit');
+    assert.equal(mock.calls.length, 1);
+
+    // An unknown hook could add credentials, so it still disables caching.
+    const custom = client.extend({ hooks: { beforeRequest: () => {} } });
+    assert.equal((await custom.get('/items')).cache, undefined);
+    assert.equal(mock.calls.length, 2);
+  } finally {
+    limiter.stop();
+  }
 });
 
 test('cache: unpartitioned request hooks bypass caching unless given an explicit cache key', async () => {

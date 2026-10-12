@@ -1,5 +1,5 @@
 import { RateLimitError } from './errors.ts';
-import { safeOrigin } from './internal.ts';
+import { markCacheNeutral, safeOrigin } from './internal.ts';
 import { type Messages, resolveMessage } from './messages.ts';
 import type { HookRequest, Hooks, Plugin } from './types.ts';
 import { parseRetryAfter } from './utils.ts';
@@ -177,7 +177,7 @@ export function rateLimit(options: RateLimitOptions): RateLimitPlugin {
     return undefined;
   };
 
-  const hooks: Hooks = { beforeRequest: (request) => acquire(request) };
+  const hooks: Hooks = { beforeRequest: markCacheNeutral((request: HookRequest) => acquire(request)) };
   if (respectHeaders) {
     hooks.afterResponse = (response, request) => {
       const pause = pauseFor(response);

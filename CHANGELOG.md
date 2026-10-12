@@ -18,6 +18,7 @@ Planned as 1.2.0 (minor: new features, no breaking API changes).
 - `onDownloadProgress` and `onUploadProgress` options, and `iterateLines`, `iterateNdjson` and `iterateSse` stream helpers. See `docs/progress-and-streaming.md`.
 - `mockFetch()` in the new `@dipanshuhandoo/fetchforge/testing` entry: routes with params, reply sequences, delays, network errors, call inspection. See `docs/testing.md`.
 - Guards `isValidationError`, `isRateLimitError`, `isAuthError`, `isQueuedError`; message keys `validation`, `rateLimit`, `auth`, `queued`; the `queued` and `cache` fields on `FetchResult`.
+- Simple `examples/tools/http-status-checker` examples: sequential checks and built-in `bulk()` with concurrency 5, CSV reporting, redirect chains, retries, cache, logger, monitor and console hooks. Includes a 50-URL offline demo.
 
 ### Changed
 
@@ -28,7 +29,7 @@ Planned as 1.2.0 (minor: new features, no breaking API changes).
 ### Fixed
 
 - Corrupted characters in `monitor` option documentation (`flushIntervalMs`, `reset()`, `retainMs`).
-- Cache entries are partitioned by response type and hashed credentials from request headers and built-in auth plugins; streams bypass the cache. Requests with unpartitioned `beforeRequest` hooks also bypass unless an explicit cache key is provided.
+- Cache entries are partitioned by response type and hashed credentials from request headers and built-in auth plugins; streams bypass the cache. Requests with unpartitioned `beforeRequest` hooks also bypass unless an explicit cache key is provided. The built-in `rateLimit()`, `logger()` and `idempotency()` hooks don't count as unpartitioned, so combining them with `cache()` no longer silently disables caching.
 - `authRefresh` now calls `onRefreshFailed` once per shared failed refresh, rather than once per waiting request.
 - `offlineQueue.pending()` and queue observer callbacks now receive copies, so mutating returned headers or metadata cannot alter persisted requests.
 

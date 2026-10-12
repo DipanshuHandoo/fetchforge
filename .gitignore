@@ -147,3 +147,8 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Output of examples/tools/http-status-checker
+examples/tools/*/reports/
+http-status-report/
+.status-cache/

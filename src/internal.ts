@@ -15,6 +15,19 @@ export function setRevalidating(request: HookRequest, value: boolean): void {
   (request as unknown as Record<symbol, unknown>)[REVALIDATING] = value;
 }
 
+// Built-in beforeRequest hooks that never change who the response is for (rate limiting, request IDs,
+// idempotency keys). The cache ignores them when deciding whether unknown hooks might add credentials.
+const cacheNeutralHooks = new WeakSet<object>();
+
+export function markCacheNeutral<T extends object>(hook: T): T {
+  cacheNeutralHooks.add(hook);
+  return hook;
+}
+
+export function isCacheNeutral(hook: unknown): boolean {
+  return typeof hook === 'function' && cacheNeutralHooks.has(hook);
+}
+
 export function registerCachePartition(client: object, provider: CachePartitionProvider): void {
   let providers = cachePartitionProviders.get(client);
   if (!providers) {

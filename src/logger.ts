@@ -1,5 +1,6 @@
 import type { CompleteInfo, HookRequest, Plugin, RetryInfo } from './types.ts';
 import { isFetchForgeError } from './errors.ts';
+import { markCacheNeutral } from './internal.ts';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -123,7 +124,7 @@ export function logger(options: LoggerOptions = {}): Plugin {
   return {
     name: 'logger',
     hooks: {
-      beforeRequest: (request) => {
+      beforeRequest: markCacheNeutral((request: HookRequest) => {
         if (requestIdHeader !== false) {
           const existing = request.headers.get(requestIdHeader);
           request.meta.requestId ??= existing ?? newId();
@@ -134,7 +135,7 @@ export function logger(options: LoggerOptions = {}): Plugin {
           attempt: request.attempt,
           ...(logHeaders ? { headers: headersOf(request) } : {}),
         });
-      },
+      }),
       beforeRetry: (info: RetryInfo) => {
         emit(
           'warn',

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -181,14 +181,18 @@ try {
       assert.equal(out.trim(), 'ok', `subpath exercise (${type}) failed`);
     }
 
-    for (const name of await readdir(path.join(root, 'examples'))) {
-      await copyFile(path.join(root, 'examples', name), path.join(consumer, name));
-    }
+    await cp(path.join(root, 'examples'), consumer, { recursive: true });
     const examples = (await readdir(path.join(root, 'examples'))).filter(
       (name) => name.endsWith('.mjs') && !name.startsWith('_'),
     );
     assert.ok(examples.length >= 10, 'expected the full example set');
     for (const name of examples) run(process.execPath, [name], { cwd: consumer });
+
+    const tools = await readdir(path.join(root, 'examples/tools'));
+    assert.ok(tools.length >= 1, 'expected at least one example tool');
+    for (const tool of tools) {
+      run(process.execPath, ['smoke.mjs'], { cwd: path.join(consumer, 'tools', tool) });
+    }
 
     for (const extension of ['mts', 'cts']) {
       await copyFile(

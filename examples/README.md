@@ -49,3 +49,9 @@ From a clone: `npm run build`, then `node examples/<name>.mjs`. Each file starts
 **[`progress-streaming.mjs`](./progress-streaming.mjs)**. Download and upload progress, Server-Sent Events, NDJSON and line streams. Purpose: progress bars, live updates, large exports with constant memory. Guide: [progress and streaming](../docs/progress-and-streaming.md).
 
 **[`testing.mjs`](./testing.mjs)**. Unit tests with `mockFetch` under `node:test`: route params, reply sequences for retries, network errors, timeouts, testing the cache plugin, and unmatched requests. Purpose: test code that uses fetchforge without a server. Guide: [testing](../docs/testing.md).
+
+## Tools
+
+Small runnable tools built on the public API, each in its own folder under [`tools/`](./tools) with a README and an offline `smoke.mjs` test (also run against the packed tarball).
+
+**[`tools/http-status-checker`](./tools/http-status-checker/README.md)**. Two simple examples: `sequential.mjs` checks URLs one by one; `bulk.mjs` uses built-in `client.bulk()` with concurrency 5. Both report HTTP statuses, redirect chains and final URLs to one CSV. Shared client configuration shows retries, cache, logger, monitor and labelled lifecycle-hook console output. Run without arguments for a 50-URL offline demo, or pass your own URLs as arguments.

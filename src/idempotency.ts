@@ -1,4 +1,4 @@
-import { randomId } from './internal.ts';
+import { markCacheNeutral, randomId } from './internal.ts';
 import type { HookRequest, Plugin } from './types.ts';
 
 export interface IdempotencyOptions {
@@ -39,6 +39,6 @@ export function idempotency(options: IdempotencyOptions = {}): Plugin {
       assign(request);
       return next();
     },
-    hooks: { beforeRequest: assign },
+    hooks: { beforeRequest: markCacheNeutral(assign) },
   };
 }

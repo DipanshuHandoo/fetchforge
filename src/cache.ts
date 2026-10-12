@@ -9,6 +9,7 @@ import {
 import {
   cachePartitionProviderCount,
   getCachePartitions,
+  isCacheNeutral,
   getRequestResponseType,
   setRevalidating,
   withTimeout,
@@ -334,7 +335,11 @@ export function cache(options: CacheOptions = {}): CachePlugin {
     }
 
     const hooks = client.getConfig().hooks?.beforeRequest;
-    if (!explicitKey && Array.isArray(hooks) && hooks.length > cachePartitionProviderCount(client)) {
+    if (
+      !explicitKey &&
+      Array.isArray(hooks) &&
+      hooks.filter((hook) => !isCacheNeutral(hook)).length > cachePartitionProviderCount(client)
+    ) {
       return undefined;
     }
 

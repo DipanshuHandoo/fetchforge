@@ -52,7 +52,7 @@ Cache hits return a normal `FetchResult` (`status`, `headers` with a computed `a
 
 Register `cache()` **first** in `plugins` so a hit skips downstream work (rate limits, logging, retries and the auth request middleware). The built-in `authRefresh()` and `bearerAuth()` plugins expose their current token to the cache for a one-way hashed identity partition; changing users or tokens therefore uses a different cache entry without putting the token in the key. `responseType` is part of the key, and stream requests always bypass the cache.
 
-If a custom `beforeRequest` hook adds credentials, the cache cannot know the identity before that hook runs. It safely bypasses caching when such unpartitioned hooks are present. To cache those requests, set `key` to a callback that includes both the resource URL and your stable user/tenant identity (never return a raw secret):
+If a custom `beforeRequest` hook adds credentials, the cache cannot know the identity before that hook runs. It safely bypasses caching when such unpartitioned hooks are present. The hooks of the built-in `rateLimit()`, `logger()` and `idempotency()` plugins don't affect identity and never trigger this bypass. To cache those requests, set `key` to a callback that includes both the resource URL and your stable user/tenant identity (never return a raw secret):
 
 ```js
 cache({ key: (request) => `${currentUser.id}:${request.method}:${request.url}` });
@@ -270,7 +270,7 @@ api.post('/feed', item, { meta: { cache: { invalidateTags: ['feed'] } } });
 | `respectCacheControl` | `true` | Honour `Cache-Control`, `Expires`, `Vary` and request `Cache-Control`. |
 | `shared` | `false` | Shared-cache rules: skip `private` and authenticated responses unless public; prefer `s-maxage`. |
 | `methods` | `['GET']` | Cached methods (e.g. add `'POST'` for GraphQL/search queries together with a `key`). |
-| `statuses` | `[200, 203, 204]` | Cached statuses. |
+| `statuses` | `[200, 203, 204]` | Cached statuses. Only 2xx statuses can be stored; other statuses are results with `error` set and are never cached. |
 | `vary` | `[]` | Request headers that split entries (e.g. `['accept-language']`). |
 | `key` | `METHOD url` | Custom key function `(request) => string`. Disables URL invalidation; use tags. |
 | `prefix` | `''` | Namespace in the store; scopes `clear()`. |
