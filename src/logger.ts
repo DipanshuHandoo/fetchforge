@@ -13,7 +13,7 @@ export interface LoggerLike {
 
 export interface LoggerOptions {
   /** Destination. Default `console`. */
-  logger?: LoggerLike;
+  sink?: LoggerLike;
   /** Minimum level to emit, or `'silent'`. Default `'info'`. */
   level?: LogLevel | 'silent';
   /** Completed requests at or above this duration (ms) are logged at `warn`. Default 0 (off). */
@@ -77,7 +77,7 @@ function newId(): string {
  */
 export function logger(options: LoggerOptions = {}): Plugin {
   const {
-    logger: sink = console,
+    sink = console,
     level = 'info',
     slowThreshold = 0,
     logHeaders = false,

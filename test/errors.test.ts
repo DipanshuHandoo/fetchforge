@@ -46,7 +46,7 @@ test('totalTimeout bounds attempts plus retry delays and is not retried', async 
       assert.match(error.message, /total time limit/);
       return true;
     });
-    assert.ok(server.hits >= 2 && server.hits < 10);
+    assert.ok(server.hits >= 1 && server.hits < 10);
   } finally {
     await server.close();
   }

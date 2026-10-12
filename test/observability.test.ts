@@ -24,7 +24,7 @@ test('logger logs success at info with a correlation id header, and redacts secr
   });
   try {
     const { lines, sink } = memorySink();
-    const api = createClient({ plugins: [logger({ logger: sink })] });
+    const api = createClient({ plugins: [logger({ sink: sink })] });
     await api.get(`${server.url}/a`, { params: { token: 'SECRET', page: 2 } });
     assert.equal(lines.length, 1);
     const [line] = lines as [Line];
@@ -45,7 +45,7 @@ test('logger keeps one request id across retries and logs retries and failures',
     const { lines, sink } = memorySink();
     const api = createClient({
       retry: { retries: 2, delay: 1, jitter: 0 },
-      plugins: [logger({ logger: sink })],
+      plugins: [logger({ sink: sink })],
     });
     await assert.rejects(api.get(server.url));
     const retries = lines.filter((l) => l.level === 'warn');
@@ -69,16 +69,16 @@ test('logger honours level, slow threshold, caller request id and header redacti
   });
   try {
     const quiet = memorySink();
-    await createClient({ plugins: [logger({ logger: quiet.sink, level: 'error' })] }).get(server.url);
+    await createClient({ plugins: [logger({ sink: quiet.sink, level: 'error' })] }).get(server.url);
     assert.equal(quiet.lines.length, 0);
 
     const slow = memorySink();
-    await createClient({ plugins: [logger({ logger: slow.sink, slowThreshold: 1 })] }).get(server.url);
+    await createClient({ plugins: [logger({ sink: slow.sink, slowThreshold: 1 })] }).get(server.url);
     assert.equal(slow.lines[0]?.level, 'warn');
     assert.match(slow.lines[0]?.message ?? '', /slow/);
 
     const dbg = memorySink();
-    await createClient({ plugins: [logger({ logger: dbg.sink, level: 'debug', logHeaders: true })] }).get(
+    await createClient({ plugins: [logger({ sink: dbg.sink, level: 'debug', logHeaders: true })] }).get(
       server.url,
       {
         headers: { authorization: 'Bearer SECRET', 'x-request-id': 'mine' },
@@ -102,7 +102,7 @@ test('logger never breaks a request when the sink throws, and validates options'
         throw new Error('sink down');
       },
     };
-    const result = await createClient({ plugins: [logger({ logger: bad })] }).get(server.url);
+    const result = await createClient({ plugins: [logger({ sink: bad })] }).get(server.url);
     assert.equal(result.status, 200);
     assert.throws(() => logger({ level: 'loud' as never }), RangeError);
     assert.throws(() => logger({ slowThreshold: -1 }), RangeError);
@@ -116,7 +116,7 @@ test('logger logs circuit changes and strips credentials from URLs', async () =>
   const { lines, sink } = memorySink();
   const api = createClient({
     circuitBreaker: { failureThreshold: 1, resetTimeout: 60000 },
-    plugins: [logger({ logger: sink })],
+    plugins: [logger({ sink: sink })],
   });
   await assert.rejects(api.get(url));
   assert.ok(lines.some((l) => l.level === 'warn' && /closed -> open/.test(l.message)));

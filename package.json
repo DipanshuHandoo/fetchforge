@@ -1,6 +1,6 @@
 {
   "name": "@dipanshuhandoo/fetchforge",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Resilient fetch client for Node.js and browsers: timeouts, configurable retries and backoff, circuit breaker, request deduplication, hedging, hooks, middleware, plugins, bulk requests, typed errors and metrics.",
   "license": "MIT",
   "author": "Dipanshu Handoo",

@@ -5,8 +5,10 @@ import assert from 'node:assert/strict';
 import { createClient, logger, monitor } from '@dipanshuhandoo/fetchforge';
 import { json, startServer } from './_server.mjs';
 
-const api = await startServer((req, res, count) => {
-  if (req.url.startsWith('/flaky') && count % 2 === 1) return json(res, 503, { error: 'try later' });
+let flakyHits = 0;
+const api = await startServer((req, res) => {
+  if (req.url.startsWith('/flaky') && ++flakyHits % 2 === 1) return json(res, 503, { error: 'try later' });
+  if (req.url.startsWith('/boom')) return json(res, 500, { error: 'boom' });
   json(res, 200, { path: req.url });
 });
 
@@ -22,7 +24,7 @@ try {
     plugins: [
       // Any object with debug/info/warn/error works: console, pino, winston, ...
       logger({
-        logger: {
+        sink: {
           debug: record('debug'),
           info: record('info'),
           warn: record('warn'),
@@ -35,7 +37,7 @@ try {
 
   await client.get('/users/42', { params: { token: 'super-secret', page: 1 } });
   await client.get('/flaky');
-  await assert.rejects(client.get('/users/7', { retry: false, signal: AbortSignal.abort() }));
+  await assert.rejects(client.get('/boom', { retry: false }));
 
   const first = lines[0];
   assert.ok(!JSON.stringify(lines).includes('super-secret'), 'secrets are redacted');

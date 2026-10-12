@@ -15,7 +15,7 @@ const api = createClient({ plugins: [logger({ level: 'info' }), stats] });
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `logger` | `console` | Any object with `debug`, `info`, `warn`, `error` methods taking `(message, fields)`. Works with console, pino, winston, or your own. Missing methods are skipped. |
+| `sink` | `console` | Any object with `debug`, `info`, `warn`, `error` methods taking `(message, fields)`. Works with console, pino, winston, or your own. Missing methods are skipped. |
 | `level` | `'info'` | Minimum level: `'debug'`, `'info'`, `'warn'`, `'error'` or `'silent'`. |
 | `slowThreshold` | `0` (off) | Completed requests taking at least this many ms are logged at `warn` and marked "(slow)". |
 | `logHeaders` | `false` | Include request headers (redacted) in `debug` and error lines. |
@@ -41,7 +41,7 @@ import pino from 'pino';
 const log = pino();
 createClient({
   plugins: [logger({
-    logger: { debug: (m, f) => log.debug(f, m), info: (m, f) => log.info(f, m), warn: (m, f) => log.warn(f, m), error: (m, f) => log.error(f, m) },
+    sink: { debug: (m, f) => log.debug(f, m), info: (m, f) => log.info(f, m), warn: (m, f) => log.warn(f, m), error: (m, f) => log.error(f, m) },
     slowThreshold: 2000,
   })],
 });
