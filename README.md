@@ -18,6 +18,8 @@ A resilient, dependency-light `fetch` client for Node.js and browsers. It keeps 
 
 Retry, circuit breaker, dedupe, hedging and every plugin are **opt-in**. A client with no options behaves like `fetch` plus JSON handling, a default timeout and typed errors.
 
+For complete, runnable programs built with fetchforge (status checker, sitemap auditor, uptime monitor, resumable data sync), see [Real-world example tools](#real-world-example-tools).
+
 ## Install
 
 ```sh
@@ -80,13 +82,32 @@ for await (const event of iterateSse(await api.get('/jobs/42/events', { response
 
 Runnable examples live in [`examples/`](./examples/README.md): start with `full-tour.mjs`, then see one file per feature (retry/backoff, circuit breaker, dedupe/hedging, hooks, middleware/plugins, custom plugins and webhooks, logging and monitoring, errors/messages, bulk, timeouts, cache and cache stores, auth refresh, rate limiting, idempotency and offline queue, validation, progress and streaming, testing). Run `npm run build`, then `node examples/full-tour.mjs`.
 
-For practical runnable tools, see the [HTTP status checker](./examples/tools/http-status-checker/README.md),
-[sitemap and broken-link auditor](./examples/tools/sitemap-auditor/README.md),
-[API uptime/SLO monitor](./examples/tools/api-uptime-monitor/README.md), and
-[resumable API data migrator](./examples/tools/api-data-sync/README.md). Each has
-editable input, visible plugin setup, a local demo and ignored reports.
-
 **Full documentation:** every option, hook, error and method is defined in the [`docs/`](./docs/README.md) guides: [getting started](./docs/getting-started.md), [configuration](./docs/configuration.md), [requests and responses](./docs/requests-and-responses.md), [timeouts](./docs/timeouts.md), [retries](./docs/retries.md), [circuit breaker](./docs/circuit-breaker.md), [dedupe and hedging](./docs/dedupe-and-hedging.md), [hooks](./docs/hooks.md), [middleware](./docs/middleware-and-plugins.md), [plugins](./docs/plugins.md), [errors and messages](./docs/errors-and-messages.md), [bulk](./docs/bulk.md), [metrics](./docs/metrics.md), [logging and monitoring](./docs/logging-and-monitoring.md), [response cache](./docs/cache.md), [auth refresh](./docs/auth-refresh.md), [rate limiting](./docs/rate-limiting.md), [idempotency](./docs/idempotency.md), [offline queue](./docs/offline.md), [validation](./docs/validation.md), [progress and streaming](./docs/progress-and-streaming.md), [testing](./docs/testing.md), [API reference](./docs/api-reference.md) and [troubleshooting](./docs/troubleshooting.md).
+
+## Real-world example tools
+
+The repository includes four small, standalone tools built only on the public API. Each one has an editable `input.mjs`, a short `client.mjs` that shows exactly which options, plugins and hooks it uses, a `--demo` mode that runs against a local server with no network access, and CSV/JSON reports written to an ignored `reports/` folder.
+
+| Tool | What it does | fetchforge features it shows |
+| --- | --- | --- |
+| [HTTP status checker](https://github.com/DipanshuHandoo/fetchforge/blob/main/examples/tools/http-status-checker/README.md) | Checks a list of URLs and reports the first status, every redirect hop, the final URL and the final status, then writes a CSV. Comes in a one-by-one version and a bulk version. | `bulk` with a concurrency limit, retries, `cache`, `logger`, `monitor`, hooks |
+| [Sitemap and broken-link auditor](https://github.com/DipanshuHandoo/fetchforge/blob/main/examples/tools/sitemap-auditor/README.md) | Reads a `sitemap.xml` or sitemap index and checks every page. It can also check each page's `<a href>` links one level deep to find broken links. | `bulk`, streamed bodies with byte limits, middleware, cancellation via `signal` |
+| [API uptime and SLO monitor](https://github.com/DipanshuHandoo/fetchforge/blob/main/examples/tools/api-uptime-monitor/README.md) | Checks endpoints for an expected status and latency, once or on an interval. It tracks rolling availability and the share of fast responses against SLO targets, and posts alerts to a webhook when health changes. | `monitor`, circuit breaker per endpoint, `bulk`, retries, `throwHttpErrors: false` |
+| [Resumable API data sync](https://github.com/DipanshuHandoo/fetchforge/blob/main/examples/tools/api-data-sync/README.md) | Pages through a source API by cursor, transforms each record and POSTs it to a destination. A checkpoint lets an interrupted run resume. | `authRefresh`, `rateLimit`, `idempotency` with stable keys for safe POST retries, `bulk` |
+
+To run one, clone the repository and build it:
+
+```sh
+git clone https://github.com/DipanshuHandoo/fetchforge.git && cd fetchforge
+npm ci && npm run build
+node examples/tools/http-status-checker/bulk.mjs --demo
+node examples/tools/api-uptime-monitor/index.mjs --demo
+node examples/tools/api-data-sync/index.mjs --demo
+npm ci --prefix examples/tools/sitemap-auditor/dependencies --ignore-scripts
+node examples/tools/sitemap-auditor/index.mjs --demo
+```
+
+The `examples/` folder is not included in the npm package. These tools are reference code, not part of the package's supported API. The sitemap auditor's XML and HTML parsers (`fast-xml-parser`, `cheerio`) are installed only for that example; fetchforge itself does not depend on them.
 
 ## API
 
