@@ -19,6 +19,7 @@ Planned as 1.2.0 (minor: new features, no breaking API changes).
 - `mockFetch()` in the new `@dipanshuhandoo/fetchforge/testing` entry: routes with params, reply sequences, delays, network errors, call inspection. See `docs/testing.md`.
 - Guards `isValidationError`, `isRateLimitError`, `isAuthError`, `isQueuedError`; message keys `validation`, `rateLimit`, `auth`, `queued`; the `queued` and `cache` fields on `FetchResult`.
 - Simple `examples/tools/http-status-checker` examples: sequential checks and built-in `bulk()` with concurrency 5, CSV reporting, redirect chains, retries, cache, logger, monitor and console hooks. Includes a 50-URL offline demo.
+- Three runnable tools with editable inputs, local demos and packed-consumer smoke tests: `sitemap-auditor` (sitemap indexes and optional one-level links), `api-uptime-monitor` (scheduled probes, rolling SLOs and transition webhooks), and `api-data-sync` (cursor pages, auth refresh, rate limiting, idempotent bulk writes and resumable page checkpoints). Parser dependencies are isolated to the sitemap example; reports/checkpoints are ignored by Git.
 
 ### Changed
 

@@ -1,6 +1,6 @@
 import { cache, createClient, logger, monitor } from '@dipanshuhandoo/fetchforge';
 
-export function createStatusClient() {
+export function createStatusClient({ timeout = 5000 } = {}) {
   const stats = monitor({
     groupBy: 'origin',
     retainMs: 0,
@@ -17,7 +17,7 @@ export function createStatusClient() {
   const client = createClient({
     redirect: 'manual',
     throwHttpErrors: false,
-    timeout: 5000,
+    timeout,
     retry: { retries: 2, delay: 100, backoff: 'exponential' },
     plugins: [responses, logger({ sink: console, level: 'debug' }), stats],
     hooks: {

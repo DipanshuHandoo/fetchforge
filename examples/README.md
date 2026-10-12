@@ -54,4 +54,14 @@ From a clone: `npm run build`, then `node examples/<name>.mjs`. Each file starts
 
 Small runnable tools built on the public API, each in its own folder under [`tools/`](./tools) with a README and an offline `smoke.mjs` test (also run against the packed tarball).
 
-**[`tools/http-status-checker`](./tools/http-status-checker/README.md)**. Two simple examples: `sequential.mjs` checks URLs one by one; `bulk.mjs` uses built-in `client.bulk()` with concurrency 5. Both report HTTP statuses, redirect chains and final URLs to one CSV. Shared client configuration shows retries, cache, logger, monitor and labelled lifecycle-hook console output. Run without arguments for a 50-URL offline demo, or pass your own URLs as arguments.
+**[`tools/http-status-checker`](./tools/http-status-checker/README.md)**. `sequential.mjs` checks URLs one by one; `bulk.mjs` uses built-in `client.bulk()` with concurrency 5. Both report statuses, redirect chains and final URLs to CSV in ignored `reports/`. Edit `input.mjs`, pass URLs as arguments, or use `--demo` for 50 local URLs. Client configuration shows retries, cache, logger, monitor and labelled hook output.
+
+**[`tools/sitemap-auditor`](./tools/sitemap-auditor/README.md)**. Reads a local/remote sitemap or sitemap index and reuses the status checker. Optional one-level HTML link checks find broken internal/outbound links. Bounded XML/HTML reads, discovery errors, CSV reports and coverage summary. XML/HTML parser dependencies install only inside this example.
+
+**[`tools/api-uptime-monitor`](./tools/api-uptime-monitor/README.md)**. One-shot or nonoverlapping interval probes with expected statuses and optional schemas, rolling in-memory availability/latency SLOs, monitor metrics, endpoint circuit breakers and unhealthy/recovery webhook alerts.
+
+**[`tools/api-data-sync`](./tools/api-data-sync/README.md)**. Pages through a cursor API, transforms records and bulk POSTs them with auth refresh, rate limits and stable idempotency keys. Checkpoints completed pages only; stops on failure and resumes the interrupted page. Safe replay requires destination-side idempotency.
+
+Each new tool has editable `input.mjs`, a thin `index.mjs`, visible client/plugin setup,
+local `--demo`, ignored reports, and an offline smoke test. The auditor and monitor
+demos deliberately include unhealthy URLs and exit 1; their smoke tests assert this.

@@ -123,3 +123,7 @@ http.createServer((req, res) => {
 | Custom tracing spans | Your own [hooks](./hooks.md) or the monitor's `onEvent` |
 
 Example: [`observability.mjs`](../examples/observability.mjs).
+
+Runnable tool: [API uptime and SLO monitor](../examples/tools/api-uptime-monitor/README.md).
+It keeps expected-status/schema health separate from `monitor()` HTTP metrics,
+calculates bounded rolling probe SLOs, and sends transition alerts.

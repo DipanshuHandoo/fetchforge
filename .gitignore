@@ -150,5 +150,6 @@ vite.config.ts.timestamp-*
 
 # Output of examples/tools/http-status-checker
 examples/tools/*/reports/
+examples/tools/api-data-sync/state/
 http-status-report/
 .status-cache/

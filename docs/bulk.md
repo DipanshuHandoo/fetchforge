@@ -41,3 +41,9 @@ const failures = summary.results.filter((r) => r.status === 'rejected');
 ```
 
 Example: [`bulk.mjs`](../examples/bulk.mjs).
+
+Runnable tools: [HTTP status checker](../examples/tools/http-status-checker/README.md),
+[sitemap auditor](../examples/tools/sitemap-auditor/README.md),
+[uptime monitor](../examples/tools/api-uptime-monitor/README.md), and
+[cursor API migrator](../examples/tools/api-data-sync/README.md). All use built-in
+`bulk()` concurrency rather than a custom worker pool.

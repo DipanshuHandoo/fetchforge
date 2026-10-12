@@ -80,6 +80,12 @@ for await (const event of iterateSse(await api.get('/jobs/42/events', { response
 
 Runnable examples live in [`examples/`](./examples/README.md): start with `full-tour.mjs`, then see one file per feature (retry/backoff, circuit breaker, dedupe/hedging, hooks, middleware/plugins, custom plugins and webhooks, logging and monitoring, errors/messages, bulk, timeouts, cache and cache stores, auth refresh, rate limiting, idempotency and offline queue, validation, progress and streaming, testing). Run `npm run build`, then `node examples/full-tour.mjs`.
 
+For practical runnable tools, see the [HTTP status checker](./examples/tools/http-status-checker/README.md),
+[sitemap and broken-link auditor](./examples/tools/sitemap-auditor/README.md),
+[API uptime/SLO monitor](./examples/tools/api-uptime-monitor/README.md), and
+[resumable API data migrator](./examples/tools/api-data-sync/README.md). Each has
+editable input, visible plugin setup, a local demo and ignored reports.
+
 **Full documentation:** every option, hook, error and method is defined in the [`docs/`](./docs/README.md) guides: [getting started](./docs/getting-started.md), [configuration](./docs/configuration.md), [requests and responses](./docs/requests-and-responses.md), [timeouts](./docs/timeouts.md), [retries](./docs/retries.md), [circuit breaker](./docs/circuit-breaker.md), [dedupe and hedging](./docs/dedupe-and-hedging.md), [hooks](./docs/hooks.md), [middleware](./docs/middleware-and-plugins.md), [plugins](./docs/plugins.md), [errors and messages](./docs/errors-and-messages.md), [bulk](./docs/bulk.md), [metrics](./docs/metrics.md), [logging and monitoring](./docs/logging-and-monitoring.md), [response cache](./docs/cache.md), [auth refresh](./docs/auth-refresh.md), [rate limiting](./docs/rate-limiting.md), [idempotency](./docs/idempotency.md), [offline queue](./docs/offline.md), [validation](./docs/validation.md), [progress and streaming](./docs/progress-and-streaming.md), [testing](./docs/testing.md), [API reference](./docs/api-reference.md) and [troubleshooting](./docs/troubleshooting.md).
 
 ## API

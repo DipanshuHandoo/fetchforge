@@ -18,6 +18,10 @@ await payments.post('/charges', { amount: 1999, currency: 'eur' }); // retried s
 
 Runnable: [`examples/idempotency-offline.mjs`](../examples/idempotency-offline.mjs).
 
+Practical tool: [API data sync/migrator](../examples/tools/api-data-sync/README.md)
+uses stable keys across retries and page replay after a crash. Its destination
+must implement idempotency; the header alone cannot guarantee safe replay.
+
 ## Choosing the key
 
 - **Default:** a random UUID per call, reused across that call's retries. Protects against lost responses and retries.

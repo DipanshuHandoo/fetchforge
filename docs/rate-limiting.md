@@ -16,6 +16,10 @@ await Promise.all(repos.map((repo) => github.get(`/repos/${repo}`)));
 
 Runnable: [`examples/rate-limit.mjs`](../examples/rate-limit.mjs).
 
+Practical tool: [API data sync/migrator](../examples/tools/api-data-sync/README.md)
+combines bounded bulk concurrency with per-origin token buckets; retries consume
+quota too.
+
 ## How it works
 
 - Each bucket holds up to `limit` tokens and refills continuously at `limit / interval`. A request takes one token; with none left, it waits in a FIFO queue.

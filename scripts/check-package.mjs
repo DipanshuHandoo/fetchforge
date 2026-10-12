@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { copyFile, cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -181,17 +181,29 @@ try {
       assert.equal(out.trim(), 'ok', `subpath exercise (${type}) failed`);
     }
 
-    await cp(path.join(root, 'examples'), consumer, { recursive: true });
+    await cp(path.join(root, 'examples'), consumer, {
+      recursive: true,
+      filter: (source) => !['node_modules', 'reports', 'state'].includes(path.basename(source)),
+    });
     const examples = (await readdir(path.join(root, 'examples'))).filter(
       (name) => name.endsWith('.mjs') && !name.startsWith('_'),
     );
     assert.ok(examples.length >= 10, 'expected the full example set');
     for (const name of examples) run(process.execPath, [name], { cwd: consumer });
 
-    const tools = await readdir(path.join(root, 'examples/tools'));
-    assert.ok(tools.length >= 1, 'expected at least one example tool');
+    const tools = (await readdir(path.join(root, 'examples/tools'), { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory() && !entry.name.startsWith('_'))
+      .map((entry) => entry.name);
+    assert.ok(tools.length >= 4, 'expected all four example tools');
     for (const tool of tools) {
-      run(process.execPath, ['smoke.mjs'], { cwd: path.join(consumer, 'tools', tool) });
+      const toolDir = path.join(consumer, 'tools', tool);
+      if ((await readdir(toolDir)).includes('dependencies')) {
+        run('npm', ['ci', '--ignore-scripts', '--no-fund', '--no-audit'], {
+          cwd: path.join(toolDir, 'dependencies'),
+        });
+      }
+      const output = run(process.execPath, ['smoke.mjs'], { cwd: toolDir, capture: true });
+      console.log(output.trim().split('\n').at(-1));
     }
 
     for (const extension of ['mts', 'cts']) {

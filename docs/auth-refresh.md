@@ -20,6 +20,9 @@ const api = createClient({ baseUrl: 'https://api.example.com', plugins: [auth] }
 
 Runnable: [`examples/auth-refresh.mjs`](../examples/auth-refresh.mjs).
 
+Practical tool: [API data sync/migrator](../examples/tools/api-data-sync/README.md)
+configures independent source/destination auth and a separate token-refresh client.
+
 ## How it works
 
 1. Before every attempt, `getToken()` is read and sent as `Authorization: Bearer <token>`.

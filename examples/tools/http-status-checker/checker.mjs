@@ -1,6 +1,6 @@
 const redirects = new Set([301, 302, 303, 307, 308]);
 
-async function check(client, urls, bulk) {
+async function check(client, urls, bulk, options = {}) {
   const records = urls.map((url) => ({
     url,
     firstStatus: null,
@@ -23,11 +23,12 @@ async function check(client, urls, bulk) {
 
   // Each round checks the next hop. bulk() owns concurrency; no custom worker pool.
   while (pending.length) {
+    options.signal?.throwIfAborted();
     const requests = pending.map(({ url }) => ({ url, method: 'HEAD' }));
     let results;
     if (bulk) {
       console.log(`[bulk] ${requests.length} requests, concurrency 5`);
-      const summary = await client.bulk(requests, { concurrency: 5 });
+      const summary = await client.bulk(requests, { ...options, concurrency: 5 });
       ({ results } = summary);
       console.log(
         `[bulk] done in ${summary.durationMs} ms: ${summary.fulfilled} fulfilled, ${summary.rejected} rejected`,
@@ -75,6 +76,6 @@ export async function checkUrl(client, url) {
   return record;
 }
 
-export function checkBulk(client, urls) {
-  return check(client, urls, true);
+export function checkBulk(client, urls, options) {
+  return check(client, urls, true, options);
 }
