@@ -30,4 +30,6 @@ From a clone: `npm run build`, then `node examples/<name>.mjs`. Each file starts
 
 **[`resilience.mjs`](./resilience.mjs)**. Linear retries plus a circuit breaker together. Purpose: a starting point for production defaults. Guides: [retries](../docs/retries.md), [circuit breaker](../docs/circuit-breaker.md).
 
+**[`plugins.mjs`](./plugins.mjs)**. A custom webhook plugin (notifies another system on failures and circuit changes) and a cache plugin, combined with `bearerAuth`. Purpose: shows how to write and combine your own plugins. Guide: [plugins](../docs/plugins.md).
+
 **[`observability.mjs`](./observability.mjs)**. The `logger` plugin (redaction, correlation IDs, retry and failure lines) and the `monitor` plugin (per-route stats, windowed snapshots, periodic flush, OpenTelemetry meter, events, Prometheus text). Purpose: know what your API calls are doing in production. Guide: [logging and monitoring](../docs/logging-and-monitoring.md).

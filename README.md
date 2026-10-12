@@ -6,10 +6,10 @@ A resilient, dependency-light `fetch` client for Node.js and browsers. It keeps 
 - Retries with fixed, linear, exponential or custom backoff, jitter and `Retry-After` support
 - Circuit breaker
 - Request deduplication and hedging
-- Hooks, middleware and plugins
+- Hooks, middleware and plugins, with built-in `bearerAuth`, `logger` and `monitor` plugins
 - Bulk requests with a concurrency limit (via [`@dipanshuhandoo/async-slot-pool`](https://www.npmjs.com/package/@dipanshuhandoo/async-slot-pool))
 - Typed errors with overridable messages
-- Built-in metrics
+- Built-in metrics, plus optional structured logging and per-route monitoring (rolling windows, periodic flush, OpenTelemetry, Prometheus)
 
 Retry, circuit breaker, dedupe and hedging are **opt-in**. A client with no options behaves like `fetch` plus JSON handling, a default timeout and typed errors.
 
@@ -42,9 +42,9 @@ try {
 
 CommonJS: `const { createClient } = require('@dipanshuhandoo/fetchforge');`. A minified build is available at `@dipanshuhandoo/fetchforge/min`.
 
-Runnable examples live in [`examples/`](./examples): start with `full-tour.mjs`, then see one file per feature (retry/backoff, circuit breaker, dedupe/hedging, hooks, middleware/plugins, errors/messages, bulk, timeouts). Run `npm run build`, then `node examples/full-tour.mjs`.
+Runnable examples live in [`examples/`](./examples): start with `full-tour.mjs`, then see one file per feature (retry/backoff, circuit breaker, dedupe/hedging, hooks, middleware/plugins, custom plugins and webhooks, logging and monitoring, errors/messages, bulk, timeouts). Run `npm run build`, then `node examples/full-tour.mjs`.
 
-**Full documentation:** every option, hook, error and method is defined in the [`docs/`](./docs/README.md) guides: [getting started](./docs/getting-started.md), [configuration](./docs/configuration.md), [requests and responses](./docs/requests-and-responses.md), [timeouts](./docs/timeouts.md), [retries](./docs/retries.md), [circuit breaker](./docs/circuit-breaker.md), [dedupe and hedging](./docs/dedupe-and-hedging.md), [hooks](./docs/hooks.md), [middleware and plugins](./docs/middleware-and-plugins.md), [errors and messages](./docs/errors-and-messages.md), [bulk](./docs/bulk.md), [metrics](./docs/metrics.md), [logging and monitoring](./docs/logging-and-monitoring.md), [API reference](./docs/api-reference.md) and [troubleshooting](./docs/troubleshooting.md).
+**Full documentation:** every option, hook, error and method is defined in the [`docs/`](./docs/README.md) guides: [getting started](./docs/getting-started.md), [configuration](./docs/configuration.md), [requests and responses](./docs/requests-and-responses.md), [timeouts](./docs/timeouts.md), [retries](./docs/retries.md), [circuit breaker](./docs/circuit-breaker.md), [dedupe and hedging](./docs/dedupe-and-hedging.md), [hooks](./docs/hooks.md), [middleware](./docs/middleware-and-plugins.md), [plugins](./docs/plugins.md), [errors and messages](./docs/errors-and-messages.md), [bulk](./docs/bulk.md), [metrics](./docs/metrics.md), [logging and monitoring](./docs/logging-and-monitoring.md), [API reference](./docs/api-reference.md) and [troubleshooting](./docs/troubleshooting.md).
 
 ## API
 
@@ -148,7 +148,27 @@ const plugin: Plugin = { name: 'timing', middleware: timing, hooks: { /* ... */ 
 createClient({ plugins: [plugin, bearerAuth(() => getToken())] });
 ```
 
-`bearerAuth(token, { header, scheme })` is bundled. `token` may be async and is re-evaluated on every attempt, so refreshed tokens apply to retries.
+Three plugins are bundled. All are optional and dependency-free:
+
+| Plugin | Purpose |
+| --- | --- |
+| `bearerAuth(token, { header, scheme })` | Adds an auth header on every attempt. `token` may be async and is re-evaluated each time, so refreshed tokens apply to retries. |
+| `logger({ sink, level, slowThreshold, ... })` | Structured request logs with a correlation ID (`x-request-id`), retry/failure/slow-request/circuit lines, and redaction of secrets in headers, query strings and URL credentials. `sink` is `console` by default, or pino/winston/any object with `debug/info/warn/error`. |
+| `monitor({ groupBy, retainMs, flushIntervalMs, onFlush, meter, ... })` | Per-origin or per-route statistics: counts, error codes, latency percentiles, rolling windows, periodic flush to your store, OpenTelemetry meter, Prometheus text. |
+
+```ts
+import { bearerAuth, createClient, logger, monitor } from '@dipanshuhandoo/fetchforge';
+
+const stats = monitor({ groupBy: 'route' });
+const api = createClient({
+  plugins: [bearerAuth(() => getToken()), logger({ sink: pino() }), stats],
+});
+
+stats.snapshot({ windowMs: 60000 }); // the last minute: requests, errors, p95 per route
+stats.toPrometheus('myapp');        // text for a /metrics endpoint
+```
+
+Writing your own plugin (for example a webhook notifier or a cache) is covered in [plugins](./docs/plugins.md); logger and monitor options are in [logging and monitoring](./docs/logging-and-monitoring.md).
 
 ### Bulk requests
 

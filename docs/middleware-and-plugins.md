@@ -24,6 +24,8 @@ const api = createClient({ middleware: timing }); // or an array
 
 ## Plugins
 
+> Full guide with the built-in plugin catalog, authoring advice and recipes (webhooks, caching, rate limits): [plugins](./plugins.md).
+
 **Purpose:** bundle hooks, middleware and setup into a reusable unit.
 
 ```ts

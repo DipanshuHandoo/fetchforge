@@ -9,7 +9,7 @@ Everything is a named export (there is no default export).
 | `createClient(config?)` | Creates an independent `FetchClient`. |
 | `fetchforge` | A ready-made client with default settings. |
 | `FetchClient` | The client class (`new FetchClient(config)` equals `createClient`). |
-| `bearerAuth(token, options?)` | Plugin that adds an auth header on every attempt. See [plugins](./middleware-and-plugins.md#built-in-plugin-bearerauth). |
+| `bearerAuth(token, options?)` | Plugin that adds an auth header on every attempt. See [plugins](./plugins.md). |
 | `logger(options?)` | Plugin for structured, redacted request logs. See [logging and monitoring](./logging-and-monitoring.md). |
 | `monitor(options?)` | Plugin collecting per-group statistics, with `snapshot({ windowMs }?)`, `toPrometheus()`, `flush()`, `stop()` and `reset()`; options include `onFlush`/`flushIntervalMs` and an OpenTelemetry `meter`. |
 | `DEFAULT_MESSAGES` | The frozen default message templates. |
