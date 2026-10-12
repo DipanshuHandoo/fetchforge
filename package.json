@@ -1,6 +1,6 @@
 {
   "name": "@dipanshuhandoo/fetchforge",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Resilient fetch client for Node.js and browsers: retries, timeouts, circuit breaker, response cache with stale-while-revalidate and pluggable stores (memory, Redis, IndexedDB, localStorage, files), auth token refresh, rate limiting, idempotency keys, schema validation, progress, streaming, offline queue, mocking, hooks, plugins and metrics.",
   "license": "MIT",
   "author": "Dipanshu Handoo",
@@ -118,7 +118,7 @@
     "build": "node scripts/build.mjs",
     "test": "node scripts/test.mjs",
     "test:coverage": "node scripts/test.mjs --coverage",
-    "lint": "biome lint .",
+    "lint": "biome lint --error-on-warnings .",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "typecheck": "tsc -p tsconfig.json --noEmit",

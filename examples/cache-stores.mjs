@@ -21,7 +21,7 @@ function fakeRedis() {
   const data = new Map();
   const live = (key) => {
     const item = data.get(key);
-    if (item && item.expires && item.expires <= Date.now()) data.delete(key);
+    if (item?.expires && item.expires <= Date.now()) data.delete(key);
     return data.get(key);
   };
   return {
@@ -54,7 +54,7 @@ function fakeCacheBridge() {
   return {
     getAsync: async (key) => {
       const item = data.get(key);
-      if (item && item.expires && item.expires <= Date.now()) data.delete(key);
+      if (item?.expires && item.expires <= Date.now()) data.delete(key);
       return data.get(key)?.value;
     },
     setAsync: async (key, value, { ttl = 0 } = {}) => {

@@ -239,7 +239,8 @@ try {
         '--exclude-entrypoints',
         'browser',
       ],
-      { cwd: root },
+      // attw lists node10 rows as "(ignored) 💀" even when they pass; print its report only on failure.
+      { cwd: root, capture: true },
     );
     console.log(
       'Packed package: ESM, CommonJS, /min, TypeScript (nodenext, bundler), examples, publint and attw passed.',

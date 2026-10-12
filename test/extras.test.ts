@@ -289,7 +289,7 @@ test('offlineQueue: queues while offline and replays in order when back online',
 
 test('offlineQueue: pending and observer callbacks cannot mutate queued request data', async () => {
   const store = memoryStore();
-  let online = false;
+  const online = false;
   const plugin = offlineQueue({
     store,
     isOnline: () => online,
