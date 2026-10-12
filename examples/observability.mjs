@@ -1,5 +1,6 @@
 // Logging and monitoring: the logger plugin (redacted, correlated log lines) and the monitor plugin
-// (per-group counts, error codes, latency percentiles, Prometheus text, event stream).
+// (per-group counts, error codes, latency percentiles, windowed snapshots, periodic flush to a store,
+// OpenTelemetry meter, Prometheus text, event stream).
 // Docs: docs/logging-and-monitoring.md
 import assert from 'node:assert/strict';
 import { createClient, logger, monitor } from '@dipanshuhandoo/fetchforge';
@@ -16,7 +17,21 @@ try {
   const lines = [];
   const record = (level) => (message, fields) => lines.push({ level, message, fields });
   const events = [];
-  const stats = monitor({ groupBy: 'route', onEvent: (event) => events.push(event) });
+  const flushed = [];
+  const otel = [];
+  // A stand-in for an OpenTelemetry Meter, e.g. metrics.getMeter('fetchforge') from @opentelemetry/api.
+  const meter = {
+    createCounter: (name) => ({ add: (value, attributes) => otel.push({ name, value, attributes }) }),
+    createHistogram: (name) => ({ record: (value, attributes) => otel.push({ name, value, attributes }) }),
+  };
+  const stats = monitor({
+    groupBy: 'route',
+    onEvent: (event) => events.push(event),
+    // Push stats to a database on an interval; here we just collect them.
+    flushIntervalMs: 20,
+    onFlush: ({ interval, total }) => flushed.push({ interval, total }),
+    meter,
+  });
 
   const client = createClient({
     baseUrl: api.url,
@@ -51,6 +66,18 @@ try {
     'ids are collapsed into :id',
   );
   assert.ok(events.some((e) => e.type === 'retry'));
+
+  const lastMinute = stats.snapshot({ windowMs: 60000 });
+  const requestsInWindow = Object.values(lastMinute.groups).reduce((n, g) => n + g.requests, 0);
+  assert.equal(requestsInWindow, 3, 'windowed snapshot covers the recent requests');
+
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.ok(flushed.length >= 1, 'onFlush receives periodic reports');
+  stats.stop();
+  assert.ok(
+    otel.some((m) => m.name === 'fetchforge.request.duration'),
+    'the meter receives metrics',
+  );
 
   const text = stats.toPrometheus('myapp');
   assert.match(text, /myapp_requests_total/);

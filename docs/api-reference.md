@@ -11,7 +11,7 @@ Everything is a named export (there is no default export).
 | `FetchClient` | The client class (`new FetchClient(config)` equals `createClient`). |
 | `bearerAuth(token, options?)` | Plugin that adds an auth header on every attempt. See [plugins](./middleware-and-plugins.md#built-in-plugin-bearerauth). |
 | `logger(options?)` | Plugin for structured, redacted request logs. See [logging and monitoring](./logging-and-monitoring.md). |
-| `monitor(options?)` | Plugin collecting per-group statistics, with `snapshot()`, `toPrometheus()` and `reset()`. |
+| `monitor(options?)` | Plugin collecting per-group statistics, with `snapshot({ windowMs }?)`, `toPrometheus()`, `flush()`, `stop()` and `reset()`; options include `onFlush`/`flushIntervalMs` and an OpenTelemetry `meter`. |
 | `DEFAULT_MESSAGES` | The frozen default message templates. |
 | Error classes | `FetchForgeError`, `HttpError`, `TimeoutError`, `NetworkError`, `AbortError`, `CircuitOpenError`, `ParseError`, `RequestError`. See [errors](./errors-and-messages.md). |
 | Type guards | `isFetchForgeError`, `isHttpError`, `isTimeoutError`, `isNetworkError`, `isAbortError`, `isCircuitOpenError`, `isParseError`. |
@@ -50,7 +50,7 @@ All are exported with `import type`.
 | `Hooks`, `HookName`, `RetryInfo`, `CompleteInfo` | Hook map and its argument types. See [hooks](./hooks.md). |
 | `Middleware`, `MiddlewareContext`, `Plugin`, `BearerAuthOptions` | Extension points. |
 | `LoggerOptions`, `LoggerLike`, `LogLevel` | Logger plugin. |
-| `MonitorOptions`, `MonitorPlugin`, `MonitorSnapshot`, `GroupStats`, `MonitorEvent` | Monitor plugin. |
+| `MonitorOptions`, `MonitorPlugin`, `MonitorSnapshot`, `GroupStats`, `MonitorEvent`, `FlushReport`, `MeterLike` | Monitor plugin. |
 | `RetryOptions`, `BackoffStrategy`, `BackoffFunction`, `ShouldRetryInfo` | Retry configuration. |
 | `CircuitBreakerOptions`, `CircuitState` | Circuit breaker. |
 | `DedupeOptions`, `HedgingOptions` | Dedupe and hedging. |

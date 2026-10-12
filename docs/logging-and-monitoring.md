@@ -64,8 +64,10 @@ The returned plugin also has methods:
 
 | Method | Returns |
 | --- | --- |
-| `snapshot()` | `{ groups, circuits }`. Each group has `requests`, `succeeded`, `failed`, `attempts`, `retries`, `errors` (by code), `statusCodes`, and `latency: { count, sum, min, max, avg, p50, p95, p99 }`. Circuits map key to `{ state, opened }`. |
+| `snapshot({ windowMs }?)` | Without arguments, all-time statistics. With `windowMs` (at most `retainMs`), only the last `windowMs`, giving real rates such as the last minute's error rate and p95. `{ groups, circuits }`. Each group has `requests`, `succeeded`, `failed`, `attempts`, `retries`, `errors` (by code), `statusCodes`, and `latency: { count, sum, min, max, avg, p50, p95, p99 }`. Circuits map key to `{ state, opened }`. |
 | `toPrometheus(prefix = 'fetchforge')` | Prometheus text: `<prefix>_requests_total{group,outcome}`, `_errors_total{group,code}`, `_retries_total`, `_request_duration_ms` histogram (`_bucket`, `_sum`, `_count`), `_circuit_open_total{key}`. |
+| `flush()` | Calls `onFlush` now. |
+| `stop()` | Stops the flush timer; collection continues. Call it on shutdown. |
 | `reset()` | Clears everything. |
 
 Events passed to `onEvent`:
@@ -82,6 +84,26 @@ Notes:
 - A request counts as failed if it threw, or if a non-2xx response resolved with `throwHttpErrors: false`.
 - Latency includes retry waits. With `dedupe`, calls that joined an in-flight request are not counted separately.
 - Keep `url` out of `groupBy` functions unless the values are bounded; unbounded labels are what `maxGroups` guards against.
+
+Push stats to a database and read the last minute:
+
+```js
+const stats = monitor({
+  groupBy: 'route',
+  flushIntervalMs: 60000,
+  onFlush: ({ interval, at }) => db.collection('fetch_stats').insertOne({ at, interval }),
+  onFlushError: (error) => console.error('stats flush failed', error),
+});
+// later
+const lastMinute = stats.snapshot({ windowMs: 60000 });
+```
+
+Send to OpenTelemetry:
+
+```js
+import { metrics } from '@opentelemetry/api';
+monitor({ meter: metrics.getMeter('fetchforge') });
+```
 
 Expose Prometheus metrics from your own server:
 

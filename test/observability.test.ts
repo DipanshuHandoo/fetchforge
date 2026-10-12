@@ -217,3 +217,84 @@ test('a throwing monitor onEvent never breaks requests', async () => {
     await server.close();
   }
 });
+
+test('monitor windowed snapshots only include recent slices', async () => {
+  const server = await startServer((_req, res) => json(res, 200, {}));
+  try {
+    const stats = monitor({ sliceMs: 20, retainMs: 1000 });
+    const api = createClient({ plugins: [stats] });
+    await api.get(server.url);
+    await wait(120);
+    await api.get(server.url);
+    const recent = stats.snapshot({ windowMs: 60 });
+    const origin = Object.keys(recent.groups)[0] as string;
+    assert.equal(recent.groups[origin]?.requests, 1);
+    assert.equal(stats.snapshot({ windowMs: 1000 }).groups[origin]?.requests, 2);
+    assert.equal(stats.snapshot().groups[origin]?.requests, 2);
+    assert.throws(() => stats.snapshot({ windowMs: 5000 }), RangeError);
+    assert.throws(() => monitor({ retainMs: 0 }).snapshot({ windowMs: 10 }), /disabled/);
+    stats.reset();
+    assert.deepEqual(stats.snapshot({ windowMs: 1000 }).groups, {});
+  } finally {
+    await server.close();
+  }
+});
+
+test('monitor flushes periodically, reports errors safely and stops', async () => {
+  const server = await startServer((_req, res) => json(res, 200, {}));
+  const reports: Array<{ interval: number; total: number }> = [];
+  const errors: unknown[] = [];
+  const count = (s: { groups: Record<string, { requests: number }> }) =>
+    Object.values(s.groups).reduce((n, g) => n + g.requests, 0);
+  try {
+    const stats = monitor({
+      flushIntervalMs: 30,
+      onFlush: (report) => {
+        reports.push({ interval: count(report.interval), total: count(report.total) });
+        if (reports.length === 1) throw new Error('db down');
+      },
+      onFlushError: (error) => errors.push(error),
+    });
+    const api = createClient({ plugins: [stats] });
+    await api.get(server.url);
+    await wait(100);
+    assert.ok(reports.length >= 2);
+    assert.equal(errors.length, 1);
+    assert.equal(reports[0]?.total, 1);
+    stats.stop();
+    const after = reports.length;
+    await wait(80);
+    assert.equal(reports.length, after);
+    await stats.flush();
+    assert.equal(reports.length, after + 1);
+  } finally {
+    await server.close();
+  }
+  assert.throws(() => monitor({ flushIntervalMs: 0 }), RangeError);
+});
+
+test('monitor records to an OpenTelemetry-style meter', async () => {
+  const server = await startServer((_req, res) => json(res, 500, {}));
+  const calls: Array<{ metric: string; value: number; attributes?: Record<string, unknown> }> = [];
+  const meter = {
+    createCounter: (metric: string) => ({
+      add: (value: number, attributes?: Record<string, unknown>) => calls.push({ metric, value, attributes }),
+    }),
+    createHistogram: (metric: string) => ({
+      record: (value: number, attributes?: Record<string, unknown>) =>
+        calls.push({ metric, value, attributes }),
+    }),
+  };
+  try {
+    const api = createClient({ retry: { retries: 1, delay: 1 }, plugins: [monitor({ meter })] });
+    await api.get(server.url).catch(() => undefined);
+    const names = calls.map((c) => c.metric);
+    assert.ok(names.includes('fetchforge.retries'));
+    const requests = calls.find((c) => c.metric === 'fetchforge.requests');
+    assert.equal(requests?.attributes?.outcome, 'failure');
+    assert.equal(requests?.attributes?.code, 'ERR_HTTP');
+    assert.ok(names.includes('fetchforge.request.duration'));
+  } finally {
+    await server.close();
+  }
+});
