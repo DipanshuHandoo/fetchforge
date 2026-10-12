@@ -29,3 +29,5 @@ From a clone: `npm run build`, then `node examples/<name>.mjs`. Each file starts
 **[`bulk.mjs`](./bulk.mjs)**. A batch with a concurrency limit, per-item options and partial failures. Purpose: many calls at once. Guide: [bulk](../docs/bulk.md).
 
 **[`resilience.mjs`](./resilience.mjs)**. Linear retries plus a circuit breaker together. Purpose: a starting point for production defaults. Guides: [retries](../docs/retries.md), [circuit breaker](../docs/circuit-breaker.md).
+
+**[`observability.mjs`](./observability.mjs)**. The `logger` plugin (redaction, correlation IDs, retry and failure lines) and the `monitor` plugin (per-route stats, events, Prometheus text). Purpose: know what your API calls are doing in production. Guide: [logging and monitoring](../docs/logging-and-monitoring.md).

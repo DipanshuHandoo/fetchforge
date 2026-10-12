@@ -16,6 +16,7 @@
 | [Errors and messages](./errors-and-messages.md) | Every error class, codes, guards, customising messages |
 | [Bulk requests](./bulk.md) | Running many requests with a concurrency limit |
 | [Metrics](./metrics.md) | Counters and latency, resetting, aborting in-flight calls |
+| [Logging and monitoring](./logging-and-monitoring.md) | `logger` and `monitor` plugins: redacted logs, per-route stats, Prometheus export |
 | [API reference](./api-reference.md) | Every export, method and type |
 | [Examples](../examples/README.md) | Runnable programs, one per feature, plus a full tour |
 | [Troubleshooting and FAQ](./troubleshooting.md) | Common questions and pitfalls |

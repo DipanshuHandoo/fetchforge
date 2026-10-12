@@ -12,6 +12,8 @@ No tokens are stored in the repository or workflow.
 
 ## Release steps
 
+**Quick path:** `npm run release` logs in if needed, asks whether the change is a *Bug fix* (patch, `1.0.1`), *Feature* (minor, `1.1.0`, patch reset to 0) or *Major* (`2.0.0`, minor and patch reset to 0), computes the new version from the latest version on the npm registry, updates `package.json`/lockfile, runs verification and publishes. It does not commit or tag; do that afterwards. Manual steps:
+
 1. Update `version` in `package.json` (`npm version <major|minor|patch> --no-git-tag-version`; use `x.y.z-beta.0` for prereleases) and move the `[Unreleased]` CHANGELOG entries under the new version and date.
 2. `npm ci && npm run verify` and `npm run publish:dry`. Inspect the file list.
 3. Commit, push, open and merge the pull request.

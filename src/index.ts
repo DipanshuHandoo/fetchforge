@@ -25,6 +25,10 @@ export { DEFAULT_MESSAGES } from './messages.ts';
 export type { MessageContext, MessageTemplate, Messages } from './messages.ts';
 export { bearerAuth } from './plugins.ts';
 export type { BearerAuthOptions } from './plugins.ts';
+export { logger } from './logger.ts';
+export type { LoggerLike, LoggerOptions, LogLevel } from './logger.ts';
+export { monitor } from './monitor.ts';
+export type { GroupStats, MonitorEvent, MonitorOptions, MonitorPlugin, MonitorSnapshot } from './monitor.ts';
 export type * from './types.ts';
 
 /** Creates an independent client with its own circuits, deduplication and metrics. */

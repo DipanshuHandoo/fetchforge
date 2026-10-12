@@ -8,6 +8,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 
 ### Added
 
+- `logger` plugin (redacted, correlated, level-filtered request logs) and `monitor` plugin (per-group statistics, latency percentiles, Prometheus export, event stream); see `docs/logging-and-monitoring.md`.
 - Detailed documentation in `docs/` (guides for every feature, configuration and API reference) and an annotated examples index.
 - `createClient`, `FetchClient`, and the default `fetchforge` client.
 - Per-attempt and total timeouts.
