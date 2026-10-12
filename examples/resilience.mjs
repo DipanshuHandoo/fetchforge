@@ -1,3 +1,5 @@
+// Resilience: retries with linear delays (5s, 10s, 15s style) combined with a circuit breaker.
+// Docs: docs/retries.md, docs/circuit-breaker.md
 import assert from 'node:assert/strict';
 import { createClient, isCircuitOpenError } from '@dipanshuhandoo/fetchforge';
 import { json, startServer } from './_server.mjs';
@@ -24,7 +26,7 @@ try {
   );
   assert.equal(client.getMetrics().retries, 2);
 
-  const guarded = createClient({ circuitBreaker: { failureThreshold: 2, resetTimeout: 60_000 } });
+  const guarded = createClient({ circuitBreaker: { failureThreshold: 2, resetTimeout: 60000 } });
   for (let i = 0; i < 2; i++) await guarded.get(`${down.url}/x`).catch(() => undefined);
   const before = down.count;
   const error = await guarded.get(`${down.url}/x`).catch((e) => e);

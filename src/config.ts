@@ -11,7 +11,7 @@ import type {
 } from './types.ts';
 import { applyHeaders, isPlainObject } from './utils.ts';
 
-export const DEFAULT_TIMEOUT = 60_000;
+export const DEFAULT_TIMEOUT = 60000;
 export const IDEMPOTENT_METHODS = ['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'];
 export const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 

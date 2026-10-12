@@ -539,7 +539,7 @@ export class FetchClient {
         key,
         {
           failureThreshold: options.failureThreshold ?? 5,
-          resetTimeout: options.resetTimeout ?? 30_000,
+          resetTimeout: options.resetTimeout ?? 30000,
           halfOpenMaxRequests: options.halfOpenMaxRequests ?? 1,
           successThreshold: options.successThreshold ?? 1,
         },

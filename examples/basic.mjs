@@ -1,3 +1,5 @@
+// Basics: GET, POST with a JSON body, HEAD (headers only), and how a non-2xx response surfaces as a typed HttpError.
+// Docs: docs/requests-and-responses.md
 import assert from 'node:assert/strict';
 import { createClient, HttpError } from '@dipanshuhandoo/fetchforge';
 import { json, startServer } from './_server.mjs';

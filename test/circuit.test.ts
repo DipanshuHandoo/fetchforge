@@ -8,7 +8,7 @@ test('circuit opens after consecutive failures and stops hitting the server', as
   try {
     const transitions: string[] = [];
     const client = createClient({
-      circuitBreaker: { failureThreshold: 3, resetTimeout: 10_000 },
+      circuitBreaker: { failureThreshold: 3, resetTimeout: 10000 },
       hooks: { onCircuitStateChange: ({ from, to }) => void transitions.push(`${from}>${to}`) },
     });
     for (let i = 0; i < 3; i++) await assert.rejects(client.get(server.url), HttpError);
@@ -17,7 +17,7 @@ test('circuit opens after consecutive failures and stops hitting the server', as
       assert.ok(error instanceof CircuitOpenError);
       assert.ok(isCircuitOpenError(error));
       assert.equal(error.key, new URL(server.url).origin);
-      assert.ok(error.retryAfter > 0 && error.retryAfter <= 10_000);
+      assert.ok(error.retryAfter > 0 && error.retryAfter <= 10000);
       assert.match(error.message, /Circuit breaker is open/);
       return true;
     });
@@ -135,7 +135,7 @@ test('circuits are tracked per key; custom key and isFailure are supported; rese
   const a = await startServer((_req, res) => json(res, 500, {}));
   const b = await startServer((_req, res) => json(res, 200, {}));
   try {
-    const client = createClient({ circuitBreaker: { failureThreshold: 1, resetTimeout: 60_000 } });
+    const client = createClient({ circuitBreaker: { failureThreshold: 1, resetTimeout: 60000 } });
     await assert.rejects(client.get(a.url));
     await assert.rejects(client.get(a.url), CircuitOpenError);
     await client.get(b.url);
@@ -161,7 +161,7 @@ test('circuits are tracked per key; custom key and isFailure are supported; rese
 test('network errors and timeouts count toward the circuit; circuit errors are not retried', async () => {
   const url = await closedPortUrl();
   const client = createClient({
-    circuitBreaker: { failureThreshold: 2, resetTimeout: 60_000 },
+    circuitBreaker: { failureThreshold: 2, resetTimeout: 60000 },
     retry: { retries: 5, delay: 1 },
   });
   await assert.rejects(client.get(url)); // 2 failed attempts open the circuit, the 3rd is rejected

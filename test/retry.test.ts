@@ -178,7 +178,7 @@ test('beforeRetry receives attempt info and may change the delay', async () => {
   try {
     const infos: Array<{ attempt: number; retriesLeft: number; status: number }> = [];
     const client = createClient({
-      retry: { retries: 2, delay: 60_000 },
+      retry: { retries: 2, delay: 60000 },
       hooks: {
         beforeRetry: (info) => {
           infos.push({
@@ -204,7 +204,7 @@ test('aborting during the retry delay stops immediately without further attempts
   const server = await startServer((_req, res) => json(res, 500, {}));
   try {
     const controller = new AbortController();
-    const client = createClient({ retry: { retries: 5, delay: 60_000 } });
+    const client = createClient({ retry: { retries: 5, delay: 60000 } });
     const pending = client.get(server.url, { signal: controller.signal });
     setTimeout(() => controller.abort(), 50);
     await assert.rejects(pending, (error: unknown) => (error as Error).name === 'AbortError');

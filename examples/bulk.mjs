@@ -1,3 +1,5 @@
+// Bulk: run many requests with a concurrency limit, keep input order, and collect failures without aborting the batch.
+// Docs: docs/bulk.md
 import assert from 'node:assert/strict';
 import { createClient } from '@dipanshuhandoo/fetchforge';
 import { json, startServer } from './_server.mjs';

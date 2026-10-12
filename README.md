@@ -28,9 +28,9 @@ import { createClient, isHttpError } from '@dipanshuhandoo/fetchforge';
 
 const api = createClient({
   baseUrl: 'https://api.example.com',
-  timeout: 5_000,
-  retry: { retries: 3, delay: 5_000, backoff: 'linear' }, // waits 5s, 10s, 15s
-  circuitBreaker: { failureThreshold: 5, resetTimeout: 30_000 },
+  timeout: 5000,
+  retry: { retries: 3, delay: 5000, backoff: 'linear' }, // waits 5s, 10s, 15s
+  circuitBreaker: { failureThreshold: 5, resetTimeout: 30000 },
 });
 
 try {
@@ -42,7 +42,9 @@ try {
 
 CommonJS: `const { createClient } = require('@dipanshuhandoo/fetchforge');`. A minified build is available at `@dipanshuhandoo/fetchforge/min`.
 
-Runnable examples live in [`examples/`](./examples) (`npm run build` first, then `node examples/basic.mjs`).
+Runnable examples live in [`examples/`](./examples): start with `full-tour.mjs`, then see one file per feature (retry/backoff, circuit breaker, dedupe/hedging, hooks, middleware/plugins, errors/messages, bulk, timeouts). Run `npm run build`, then `node examples/full-tour.mjs`.
+
+**Full documentation:** every option, hook, error and method is defined in the [`docs/`](./docs/README.md) guides: [getting started](./docs/getting-started.md), [configuration](./docs/configuration.md), [requests and responses](./docs/requests-and-responses.md), [timeouts](./docs/timeouts.md), [retries](./docs/retries.md), [circuit breaker](./docs/circuit-breaker.md), [dedupe and hedging](./docs/dedupe-and-hedging.md), [hooks](./docs/hooks.md), [middleware and plugins](./docs/middleware-and-plugins.md), [errors and messages](./docs/errors-and-messages.md), [bulk](./docs/bulk.md), [metrics](./docs/metrics.md), [API reference](./docs/api-reference.md) and [troubleshooting](./docs/troubleshooting.md).
 
 ## API
 
@@ -76,7 +78,7 @@ All options can be set on the client and overridden per request. Hooks and middl
 | Option | Default | Notes |
 | --- | --- | --- |
 | `baseUrl`, `params`, `headers` | | Query params accept arrays, `Date`s and `URLSearchParams`. |
-| `timeout` | `30000` | Per attempt, ms. `0`/`false`-like values are rejected; see validation below. |
+| `timeout` | `60000` | Per attempt, in ms. Must be a positive number. |
 | `totalTimeout` | none | Across all attempts and retry waits. |
 | `throwHttpErrors` | `true` | `false`, or `(status) => boolean`. When it does not throw, `result.error` holds the `HttpError`. |
 | `retry` | off | `true`, a number of retries, or `RetryOptions`. |
@@ -97,10 +99,10 @@ retry: {
   retries: 3,
   delay: 1000,
   backoff: 'exponential',   // 'fixed' | 'linear' | 'exponential' | (n, info) => ms
-  factor: 2, maxDelay: 30_000, jitter: 0.2,
+  factor: 2, maxDelay: 30000, jitter: 0.2,
   methods: ['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'],  // idempotent by default
   statusCodes: [408, 425, 429, 500, 502, 503, 504],
-  respectRetryAfter: true, maxRetryAfter: 60_000,
+  respectRetryAfter: true, maxRetryAfter: 60000,
   shouldRetry: ({ error, retryable }) => retryable,
 }
 ```
@@ -109,7 +111,7 @@ retry: {
 
 ### Circuit breaker
 
-Circuits are tracked per `host` by default (override with `key`). Network errors, timeouts, 5xx and 429 count as failures; 4xx responses count as success; aborts are neutral. After `failureThreshold` consecutive failures the circuit opens and calls fail immediately with `CircuitOpenError` (no network call). After `resetTimeout` ms a limited number of probe requests (`halfOpenMaxRequests`) are let through; `successThreshold` successes close it. Inspect with `client.getCircuitState(urlOrKey)` and reset with `client.resetCircuit()`.
+Circuits are tracked per URL **origin** by default (override with `key`). Network errors, timeouts, 5xx and 429 count as failures; 4xx responses count as success; aborts are neutral. After `failureThreshold` consecutive failures the circuit opens and calls fail immediately with `CircuitOpenError` (no network call). After `resetTimeout` ms a limited number of probe requests (`halfOpenMaxRequests`) are let through; `successThreshold` successes close it. Inspect with `client.getCircuitState(urlOrKey)` and reset with `client.resetCircuit()`.
 
 ### Deduplication and hedging
 
@@ -200,7 +202,7 @@ The package ships its own declarations for ESM and CommonJS consumers. All optio
 - Retries cannot replay stream bodies; such requests are never retried or hedged.
 - Dedupe and the circuit breaker are per client instance and per process; there is no shared state across processes.
 - Hedging and retries on non-idempotent methods can duplicate side effects; you must opt in explicitly.
-- Browsers: the circuit breaker host key and CORS behaviour follow what `fetch` exposes.
+- Browsers: the circuit breaker origin key and CORS behaviour follow what `fetch` exposes.
 
 ## Migrating from the pre-release `fetch.service.js`
 

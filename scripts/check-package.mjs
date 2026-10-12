@@ -15,6 +15,8 @@ const required = [
   'README.md',
   'CHANGELOG.md',
   'LICENSE',
+  'docs/README.md',
+  'docs/api-reference.md',
   'dist/esm/index.js',
   'dist/esm/index.min.js',
   'dist/esm/index.d.ts',
@@ -68,7 +70,7 @@ try {
     if (file.endsWith('.map')) continue;
     assert.ok(!forbidden.test(file), `tarball contains unexpected file ${file}`);
   }
-  assert.ok(packed.size < 400_000, `tarball is unexpectedly large: ${packed.size} bytes`);
+  assert.ok(packed.size < 400000, `tarball is unexpectedly large: ${packed.size} bytes`);
   for (const file of files.filter((f) => f.endsWith('.map'))) {
     const map = JSON.parse(await readFile(path.join(root, file), 'utf8'));
     assert.ok(
@@ -133,8 +135,11 @@ try {
     for (const name of await readdir(path.join(root, 'examples'))) {
       await copyFile(path.join(root, 'examples', name), path.join(consumer, name));
     }
-    for (const name of ['basic', 'resilience', 'bulk'])
-      run(process.execPath, [`${name}.mjs`], { cwd: consumer });
+    const examples = (await readdir(path.join(root, 'examples'))).filter(
+      (name) => name.endsWith('.mjs') && !name.startsWith('_'),
+    );
+    assert.ok(examples.length >= 10, 'expected the full example set');
+    for (const name of examples) run(process.execPath, [name], { cwd: consumer });
 
     for (const extension of ['mts', 'cts']) {
       await copyFile(

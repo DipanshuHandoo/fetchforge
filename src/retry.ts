@@ -7,10 +7,10 @@ export const RETRY_DEFAULTS = {
   retries: 3,
   delay: 1000,
   factor: 2,
-  maxDelay: 30_000,
+  maxDelay: 30000,
   jitter: 0,
   statusCodes: [408, 425, 429, 500, 502, 503, 504] as number[],
-  maxRetryAfter: 60_000,
+  maxRetryAfter: 60000,
 };
 
 /** Built-in eligibility rules (method, status, error kind). Hard stops are applied by the caller. */

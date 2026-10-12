@@ -8,6 +8,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 
 ### Added
 
+- Detailed documentation in `docs/` (guides for every feature, configuration and API reference) and an annotated examples index.
 - `createClient`, `FetchClient`, and the default `fetchforge` client.
 - Per-attempt and total timeouts.
 - Retries with fixed, linear, exponential and custom backoff, jitter and `Retry-After` support.
