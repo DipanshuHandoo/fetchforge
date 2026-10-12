@@ -19,6 +19,7 @@ Playwright's browser is installed with `npx playwright install chromium`.
 - No new runtime dependencies without discussion.
 - Tests must be deterministic and close every server, timer and connection they open.
 - Never commit secrets, tokens or `.env` files.
+- Use LF line endings. `.gitattributes` enforces them on checkout, including Windows; Biome uses the same convention.
 
 ## Reporting bugs
 
